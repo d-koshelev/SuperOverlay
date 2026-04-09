@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private DispatcherTimer? _timer;
 
     private bool _isDraggingCanvas;
+    private bool _isResizingItem;
     private Point _lastCanvasPoint;
 
     public MainWindow()
@@ -115,37 +116,74 @@ public partial class MainWindow : Window
 
     private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (_session?.GetSelectedItemId() is null)
+        if (_session is null)
         {
             return;
         }
 
-        _isDraggingCanvas = true;
+        var hitSource = e.OriginalSource as DependencyObject;
+        var hitItemId = _session.HitTestItemId(hitSource);
+
+        if (hitItemId is null)
+        {
+            _session.SelectItem(null);
+            RefreshItemList();
+            HideGuides();
+            return;
+        }
+
+        _session.SelectItem(hitItemId.Value);
+        RefreshItemList();
+
         _lastCanvasPoint = e.GetPosition(RootGrid);
+        _isResizingItem = _session.IsResizeHandleHit(hitSource, hitItemId.Value);
+        _isDraggingCanvas = !_isResizingItem;
+
         RootGrid.CaptureMouse();
+        e.Handled = true;
     }
 
     private void RootGrid_OnMouseMove(object sender, MouseEventArgs e)
     {
         if (_session is null) return;
 
+        var current = e.GetPosition(RootGrid);
+
+        if (_isResizingItem && e.LeftButton == MouseButtonState.Pressed)
+        {
+            var dx = current.X - _lastCanvasPoint.X;
+            var dy = current.Y - _lastCanvasPoint.Y;
+
+            if (Math.Abs(dx) < double.Epsilon && Math.Abs(dy) < double.Epsilon)
+            {
+                return;
+            }
+
+            if (_session.ResizeSelected(dx, dy))
+            {
+                _lastCanvasPoint = current;
+                RefreshItemList();
+            }
+
+            return;
+        }
+
         if (!_isDraggingCanvas || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
         }
 
-        var current = e.GetPosition(RootGrid);
-        var dx = current.X - _lastCanvasPoint.X;
-        var dy = current.Y - _lastCanvasPoint.Y;
+        var dxMove = current.X - _lastCanvasPoint.X;
+        var dyMove = current.Y - _lastCanvasPoint.Y;
 
-        if (Math.Abs(dx) < double.Epsilon && Math.Abs(dy) < double.Epsilon)
+        if (Math.Abs(dxMove) < double.Epsilon && Math.Abs(dyMove) < double.Epsilon)
         {
             return;
         }
 
         var result = _session.MoveSelectedWithSnap(
-            dx,
-            dy,
+            dxMove,
+            dyMove,
             RootGrid.ActualWidth,
             RootGrid.ActualHeight,
             Keyboard.Modifiers.HasFlag(ModifierKeys.Alt));
@@ -162,12 +200,13 @@ public partial class MainWindow : Window
     {
         if (_session is null) return;
 
-        if (!_isDraggingCanvas)
+        if (!_isDraggingCanvas && !_isResizingItem)
         {
             return;
         }
 
         _isDraggingCanvas = false;
+        _isResizingItem = false;
         RootGrid.ReleaseMouseCapture();
         _session.EndDrag();
         _session.SaveLayout();
@@ -202,7 +241,9 @@ public partial class MainWindow : Window
         var selectedId = _session.GetSelectedItemId();
 
         ItemComboBox.ItemsSource = items;
-        ItemComboBox.SelectedItem = items.FirstOrDefault(x => x.Id == selectedId) ?? items.FirstOrDefault();
+        ItemComboBox.SelectedItem = selectedId is null
+            ? null
+            : items.FirstOrDefault(x => x.Id == selectedId.Value);
     }
 
     private void HideGuides()

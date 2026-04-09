@@ -81,7 +81,24 @@ public sealed class OverlayRuntimeSession
 
     public Guid? GetSelectedItemId() => _selectedItemId;
 
-    public void SelectItem(Guid? itemId) => _selectedItemId = itemId;
+    public void SelectItem(Guid? itemId)
+    {
+        _selectedItemId = itemId;
+        _layoutHost.SelectItem(itemId);
+    }
+
+    public Guid? HitTestItemId(object? hitSource)
+    {
+        return hitSource is null
+            ? null
+            : _layoutHost.HitTestItem(hitSource as System.Windows.DependencyObject)?.Item.Id;
+    }
+
+    public bool IsResizeHandleHit(object? hitSource, Guid itemId)
+    {
+        return hitSource is not null
+            && _layoutHost.IsResizeHandleHit(hitSource as System.Windows.DependencyObject, itemId);
+    }
 
     public bool AddItem(string typeId)
     {
@@ -162,7 +179,7 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            RefreshRuntime();
+            SyncPlacementToRuntime(_selectedItemId.Value);
         }
 
         return changed;
@@ -218,7 +235,7 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            RefreshRuntime();
+            SyncPlacementToRuntime(_selectedItemId.Value);
         }
 
         return new LayoutMoveResult(changed, snapX, snapY);
@@ -239,7 +256,7 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            RefreshRuntime();
+            SyncPlacementToRuntime(_selectedItemId.Value);
         }
 
         return changed;
@@ -272,5 +289,17 @@ public sealed class OverlayRuntimeSession
     {
         var runtimeItems = _composer.Compose(_layout);
         _layoutHost.Load(runtimeItems);
+        _layoutHost.SelectItem(_selectedItemId);
+    }
+
+    private void SyncPlacementToRuntime(Guid itemId)
+    {
+        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == itemId);
+        if (placement is null)
+        {
+            return;
+        }
+
+        _layoutHost.TryUpdatePlacement(itemId, placement);
     }
 }

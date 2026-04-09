@@ -66,7 +66,7 @@
         <Grid Background="#11000000">
             <Grid x:Name="RootGrid"
                   Background="Transparent"
-                  MouseLeftButtonDown="RootGrid_OnMouseLeftButtonDown"
+                  PreviewMouseLeftButtonDown="RootGrid_OnMouseLeftButtonDown"
                   MouseMove="RootGrid_OnMouseMove"
                   MouseLeftButtonUp="RootGrid_OnMouseLeftButtonUp"/>
 

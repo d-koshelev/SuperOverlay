@@ -1,3 +1,5 @@
+using SuperOverlay.LayoutBuilder.Layout;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace SuperOverlay.LayoutBuilder.Runtime;
@@ -58,6 +60,38 @@ public sealed class LayoutHost
         {
             item.SetSelected(item.Item.Id == itemId);
         }
+    }
+
+    public RuntimeLayoutItem? HitTestItem(DependencyObject? element)
+    {
+        for (var index = _items.Count - 1; index >= 0; index--)
+        {
+            var item = _items[index];
+            if (item.ContainsElement(element))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    public bool IsResizeHandleHit(DependencyObject? element, Guid itemId)
+    {
+        var item = _items.FirstOrDefault(x => x.Item.Id == itemId);
+        return item is not null && item.IsResizeHandleElement(element);
+    }
+
+    public bool TryUpdatePlacement(Guid itemId, LayoutItemPlacement placement)
+    {
+        var item = _items.FirstOrDefault(x => x.Item.Id == itemId);
+        if (item is null)
+        {
+            return false;
+        }
+
+        item.UpdatePlacement(placement);
+        return true;
     }
 
     public void Update(object runtimeState)
