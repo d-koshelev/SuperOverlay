@@ -1,4 +1,4 @@
-﻿namespace SuperOverlay.Dashboards.Items.Speed;
+namespace SuperOverlay.Dashboards.Items.Speed;
 
 public sealed record SpeedDashboardSettings(
     bool ShowUnit = true,

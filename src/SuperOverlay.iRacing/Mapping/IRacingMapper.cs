@@ -1,4 +1,4 @@
-﻿using SuperOverlay.Dashboards.Runtime;
+using SuperOverlay.Dashboards.Runtime;
 
 namespace SuperOverlay.iRacing.Mapping;
 

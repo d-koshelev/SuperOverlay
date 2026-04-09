@@ -1,4 +1,4 @@
-﻿namespace SuperOverlay.Dashboards.Runtime;
+namespace SuperOverlay.Dashboards.Runtime;
 
 public sealed record DashboardRuntimeState(
     VehicleState Vehicle,

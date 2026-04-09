@@ -1,7 +1,4 @@
-﻿using SuperOverlay.Dashboards.Contracts;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using SuperOverlay.Dashboards.Contracts;
 
 namespace SuperOverlay.Dashboards.Registry;
 
@@ -12,7 +9,6 @@ public sealed class DashboardRegistry
     public void Register(IDashboardDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
-
         _definitions[definition.TypeId] = definition;
     }
 
@@ -31,5 +27,13 @@ public sealed class DashboardRegistry
     public IReadOnlyCollection<IDashboardDefinition> GetAll()
     {
         return _definitions.Values;
+    }
+
+    public IReadOnlyList<DashboardCatalogItem> GetCatalog()
+    {
+        return _definitions.Values
+            .Select(x => new DashboardCatalogItem(x.TypeId, x.DisplayName, x.SettingsType))
+            .OrderBy(x => x.DisplayName)
+            .ToList();
     }
 }

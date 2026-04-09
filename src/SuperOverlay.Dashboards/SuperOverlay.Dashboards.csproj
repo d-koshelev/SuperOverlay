@@ -1,20 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<ItemGroup>
+		<ProjectReference Include="..\SuperOverlay.LayoutBuilder\SuperOverlay.LayoutBuilder.csproj" />
+	</ItemGroup>
+
 	<PropertyGroup>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\SuperOverlay.LayoutBuilder\SuperOverlay.LayoutBuilder.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Items\Fuel\" />
-	  <Folder Include="Items\Relative\" />
-	  <Folder Include="Items\Pedals\" />
-	  <Folder Include="Shared\" />
-	</ItemGroup>
 
 </Project>

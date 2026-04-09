@@ -1,9 +1,7 @@
-﻿using SuperOverlay.LayoutBuilder.Contracts;
-using SuperOverlay.LayoutBuilder.Layout;
-using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Xml.Linq;
+using SuperOverlay.LayoutBuilder.Contracts;
+using SuperOverlay.LayoutBuilder.Layout;
 
 namespace SuperOverlay.LayoutBuilder.Runtime;
 

@@ -1,5 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Windows.Controls;
 
 namespace SuperOverlay.LayoutBuilder.Runtime;
@@ -12,7 +10,6 @@ public sealed class LayoutHost
     public LayoutHost(Grid root)
     {
         ArgumentNullException.ThrowIfNull(root);
-
         _root = root;
     }
 
@@ -22,6 +19,18 @@ public sealed class LayoutHost
     {
         _root.Children.Clear();
         _items.Clear();
+    }
+
+    public void Load(IEnumerable<RuntimeLayoutItem> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        Clear();
+
+        foreach (var item in items)
+        {
+            AddItem(item);
+        }
     }
 
     public void AddItem(RuntimeLayoutItem item)

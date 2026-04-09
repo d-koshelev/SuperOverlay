@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+namespace SuperOverlay.LayoutBuilder.Layout;
 
-namespace SuperOverlay.LayoutBuilder.Layout
-{
-    internal class LayoutItemLink
-    {
-    }
-}
+public sealed record LayoutItemLink(
+    Guid SourceItemId,
+    Guid TargetItemId,
+    LayoutDockSide SourceSide,
+    LayoutDockSide TargetSide,
+    double Gap);

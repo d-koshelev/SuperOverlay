@@ -1,5 +1,3 @@
-﻿using System.Collections.Generic;
-
 namespace SuperOverlay.LayoutBuilder.Layout;
 
 public sealed record LayoutDocument(
@@ -7,4 +5,5 @@ public sealed record LayoutDocument(
     string Name,
     LayoutCanvas Canvas,
     IReadOnlyList<LayoutItemInstance> Items,
-    IReadOnlyList<LayoutItemPlacement> Placements);
+    IReadOnlyList<LayoutItemPlacement> Placements,
+    IReadOnlyList<LayoutItemLink> Links);

@@ -1,4 +1,5 @@
-﻿using SuperOverlay.Dashboards.Items.Gear;
+using System.Text.Json;
+using SuperOverlay.Dashboards.Items.Gear;
 using SuperOverlay.Dashboards.Items.Speed;
 using SuperOverlay.LayoutBuilder.Layout;
 
@@ -16,12 +17,12 @@ public static class DefaultLayoutFactory
             new(
                 gearId,
                 "dashboard.gear",
-                new GearDashboardSettings()),
+                JsonSerializer.Serialize(new GearDashboardSettings())),
 
             new(
                 speedId,
                 "dashboard.speed",
-                new SpeedDashboardSettings())
+                JsonSerializer.Serialize(new SpeedDashboardSettings()))
         };
 
         var placements = new List<LayoutItemPlacement>
@@ -43,11 +44,22 @@ public static class DefaultLayoutFactory
                 10)
         };
 
+        var links = new List<LayoutItemLink>
+        {
+            new(
+                gearId,
+                speedId,
+                LayoutDockSide.Left,
+                LayoutDockSide.Right,
+                10)
+        };
+
         return new LayoutDocument(
             "1.0",
             "Default Layout",
             new LayoutCanvas(400, 300),
             items,
-            placements);
+            placements,
+            links);
     }
 }

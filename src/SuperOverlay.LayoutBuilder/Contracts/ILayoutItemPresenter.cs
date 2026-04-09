@@ -1,4 +1,4 @@
-﻿namespace SuperOverlay.LayoutBuilder.Contracts;
+namespace SuperOverlay.LayoutBuilder.Contracts;
 
 public interface ILayoutItemPresenter
 {

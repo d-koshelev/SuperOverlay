@@ -1,5 +1,3 @@
-﻿using System;
-
 namespace SuperOverlay.LayoutBuilder.Layout;
 
 public sealed record LayoutItemPlacement(

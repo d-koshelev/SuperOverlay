@@ -1,9 +1,10 @@
-﻿using SuperOverlay.LayoutBuilder.Contracts;
-using System;
+using SuperOverlay.LayoutBuilder.Contracts;
 
 namespace SuperOverlay.Dashboards.Contracts;
 
 public interface IDashboardDefinition : ILayoutItemDefinition
 {
     Type SettingsType { get; }
+
+    object MaterializeSettings(object rawSettings);
 }

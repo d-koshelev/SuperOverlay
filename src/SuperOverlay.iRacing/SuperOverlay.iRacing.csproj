@@ -1,22 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\SuperOverlay.LayoutBuilder\SuperOverlay.LayoutBuilder.csproj" />
-    <ProjectReference Include="..\SuperOverlay.Dashboards\SuperOverlay.Dashboards.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\SuperOverlay.LayoutBuilder\SuperOverlay.LayoutBuilder.csproj" />
+		<ProjectReference Include="..\SuperOverlay.Dashboards\SuperOverlay.Dashboards.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Configuration\" />
-    <Folder Include="Bootstrap\" />
-    <Folder Include="Telemetry\Live\" />
-  </ItemGroup>
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-	  <TargetFramework>net8.0-windows</TargetFramework>
-	  <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
 </Project>

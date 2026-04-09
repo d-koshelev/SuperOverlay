@@ -1,8 +1,4 @@
 <Solution>
-  <Folder Name="/docs/">
-    <File Path="ARCHITECTURE.md" />
-    <File Path="VISION.md" />
-  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SuperOverlay.Dashboards/SuperOverlay.Dashboards.csproj" />
     <Project Path="src/SuperOverlay.iRacing/SuperOverlay.iRacing.csproj" />
