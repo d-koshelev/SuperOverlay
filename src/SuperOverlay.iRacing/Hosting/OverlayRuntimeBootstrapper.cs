@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Controls;
+using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.LayoutBuilder.Persistence;
 using SuperOverlay.LayoutBuilder.Runtime;
 
@@ -22,8 +23,9 @@ public sealed class OverlayRuntimeBootstrapper
         var layout = layoutProvider.GetOrCreateDefault(layoutPath);
 
         var composer = new LayoutRuntimeComposer(registry);
-        var mutationService = new LayoutMutationService(registry);
         var fileStore = new LayoutFileStore();
+        var mutationService = new LayoutMutationService(registry);
+
         var layoutHost = new LayoutHost(root);
 
         return new OverlayRuntimeSession(

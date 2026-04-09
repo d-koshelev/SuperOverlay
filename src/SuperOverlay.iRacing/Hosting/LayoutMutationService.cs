@@ -1,4 +1,3 @@
-using System.Text.Json;
 using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.LayoutBuilder.Layout;
 
@@ -15,71 +14,81 @@ public sealed class LayoutMutationService
         _registry = registry;
     }
 
-    public LayoutDocument AddItem(
-        LayoutDocument document,
-        string typeId,
-        double x,
-        double y,
-        double width,
-        double height,
-        int zIndex)
+    public bool AddItem(ref LayoutDocument document, string typeId)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(typeId);
 
         var definition = _registry.Get(typeId);
-        var defaultSettings = definition.CreateDefaultSettings();
-        var serializedSettings = JsonSerializer.Serialize(defaultSettings, definition.SettingsType);
+        var itemId = Guid.NewGuid();
 
-        var item = LayoutItemFactory.Create(typeId, serializedSettings);
-        var placement = new LayoutItemPlacement(item.Id, x, y, width, height, zIndex);
+        var item = new LayoutItemInstance(
+            itemId,
+            definition.TypeId,
+            definition.CreateDefaultSettings());
 
-        return _editor.AddItem(document, item, placement);
+        var placement = new LayoutItemPlacement(
+            itemId,
+            40,
+            40,
+            160,
+            80,
+            10);
+
+        document = _editor.AddItem(document, item, placement);
+        return true;
     }
 
-    public LayoutDocument MoveItem(
-        LayoutDocument document,
-        Guid itemId,
-        double deltaX,
-        double deltaY)
+    public bool MoveItem(ref LayoutDocument document, Guid itemId, double deltaX, double deltaY)
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        var existingPlacement = document.Placements.FirstOrDefault(x => x.ItemId == itemId)
-            ?? throw new InvalidOperationException($"Placement for item '{itemId}' was not found.");
-
-        var updatedPlacement = existingPlacement with
+        var placement = document.Placements.FirstOrDefault(x => x.ItemId == itemId);
+        if (placement is null)
         {
-            X = existingPlacement.X + deltaX,
-            Y = existingPlacement.Y + deltaY
+            return false;
+        }
+
+        var updatedPlacement = placement with
+        {
+            X = placement.X + deltaX,
+            Y = placement.Y + deltaY
         };
 
-        return _editor.UpdatePlacement(document, updatedPlacement);
+        document = _editor.UpdatePlacement(document, updatedPlacement);
+        return true;
     }
 
-    public LayoutDocument ResizeItem(
-        LayoutDocument document,
-        Guid itemId,
-        double deltaWidth,
-        double deltaHeight)
+    public bool ResizeItem(ref LayoutDocument document, Guid itemId, double deltaWidth, double deltaHeight)
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        var existingPlacement = document.Placements.FirstOrDefault(x => x.ItemId == itemId)
-            ?? throw new InvalidOperationException($"Placement for item '{itemId}' was not found.");
-
-        var updatedPlacement = existingPlacement with
+        var placement = document.Placements.FirstOrDefault(x => x.ItemId == itemId);
+        if (placement is null)
         {
-            Width = Math.Max(40, existingPlacement.Width + deltaWidth),
-            Height = Math.Max(24, existingPlacement.Height + deltaHeight)
+            return false;
+        }
+
+        var updatedPlacement = placement with
+        {
+            Width = Math.Max(40, placement.Width + deltaWidth),
+            Height = Math.Max(30, placement.Height + deltaHeight)
         };
 
-        return _editor.UpdatePlacement(document, updatedPlacement);
+        document = _editor.UpdatePlacement(document, updatedPlacement);
+        return true;
     }
 
-    public LayoutDocument DeleteItem(LayoutDocument document, Guid itemId)
+    public bool DeleteItem(ref LayoutDocument document, Guid itemId)
     {
         ArgumentNullException.ThrowIfNull(document);
-        return _editor.RemoveItem(document, itemId);
+
+        if (!document.Items.Any(x => x.Id == itemId))
+        {
+            return false;
+        }
+
+        document = _editor.RemoveItem(document, itemId);
+        return true;
     }
 }

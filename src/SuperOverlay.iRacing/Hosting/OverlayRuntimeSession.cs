@@ -1,5 +1,4 @@
 using SuperOverlay.Dashboards.Registry;
-using SuperOverlay.Dashboards.Runtime;
 using SuperOverlay.LayoutBuilder.Layout;
 using SuperOverlay.LayoutBuilder.Persistence;
 using SuperOverlay.LayoutBuilder.Runtime;
@@ -43,47 +42,62 @@ public sealed class OverlayRuntimeSession
         _layoutPath = layoutPath;
         _layout = layout;
 
-        RefreshRuntime();
+        ReloadRuntime();
     }
 
-    public void Update(DashboardRuntimeState state)
+    public void Update(object runtimeState)
     {
-        ArgumentNullException.ThrowIfNull(state);
-        _layoutHost.Update(state);
+        _layoutHost.Update(runtimeState);
     }
 
-    public IReadOnlyList<DashboardCatalogItem> GetCatalog() => _registry.GetCatalog();
-
-    public IReadOnlyList<LayoutEditorItem> GetLayoutItems()
+    public IReadOnlyList<DashboardCatalogItem> GetCatalog()
     {
-        return _layout.Items
-            .Select(x =>
-            {
-                var definition = _registry.Get(x.TypeId);
-                return new LayoutEditorItem(x.Id, x.TypeId, definition.DisplayName);
-            })
+        return _registry
+            .GetCatalog()
             .OrderBy(x => x.DisplayName)
             .ToList();
     }
 
-    public Guid? GetSelectedItemId() => _selectedItemId;
+    public IReadOnlyList<LayoutEditorItem> GetLayoutItems()
+    {
+        return _layout.Items
+            .Select(item =>
+            {
+                var definition = _registry.Get(item.TypeId);
+
+                return new LayoutEditorItem(
+                    item.Id,
+                    item.TypeId,
+                    definition.DisplayName);
+            })
+            .ToList();
+    }
+
+    public Guid? GetSelectedItemId()
+    {
+        return _selectedItemId;
+    }
 
     public void SelectItem(Guid? itemId)
     {
         _selectedItemId = itemId;
-        _layoutHost.SelectItem(itemId);
+    }
+
+    public LayoutDocument GetCurrentLayout()
+    {
+        return _layout;
     }
 
     public bool AddItem(string typeId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(typeId);
+        var changed = _mutationService.AddItem(ref _layout, typeId);
 
-        var offset = _layout.Items.Count * 18;
-        _layout = _mutationService.AddItem(_layout, typeId, 40 + offset, 72 + offset, 160, 60, 20);
+        if (changed)
+        {
+            ReloadRuntime();
+        }
 
-        _selectedItemId = _layout.Items.LastOrDefault()?.Id;
-        RefreshRuntime();
-        return _selectedItemId is not null;
+        return changed;
     }
 
     public bool MoveSelected(double deltaX, double deltaY)
@@ -93,9 +107,14 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        _layout = _mutationService.MoveItem(_layout, _selectedItemId.Value, deltaX, deltaY);
-        RefreshRuntime();
-        return true;
+        var changed = _mutationService.MoveItem(ref _layout, _selectedItemId.Value, deltaX, deltaY);
+
+        if (changed)
+        {
+            ReloadRuntime();
+        }
+
+        return changed;
     }
 
     public bool ResizeSelected(double deltaWidth, double deltaHeight)
@@ -105,9 +124,18 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        _layout = _mutationService.ResizeItem(_layout, _selectedItemId.Value, deltaWidth, deltaHeight);
-        RefreshRuntime();
-        return true;
+        var changed = _mutationService.ResizeItem(
+            ref _layout,
+            _selectedItemId.Value,
+            deltaWidth,
+            deltaHeight);
+
+        if (changed)
+        {
+            ReloadRuntime();
+        }
+
+        return changed;
     }
 
     public bool DeleteSelected()
@@ -117,30 +145,39 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        _layout = _mutationService.DeleteItem(_layout, _selectedItemId.Value);
-        _selectedItemId = null;
-        RefreshRuntime();
-        return true;
+        var itemId = _selectedItemId.Value;
+        var changed = _mutationService.DeleteItem(ref _layout, itemId);
+
+        if (changed)
+        {
+            _selectedItemId = null;
+            ReloadRuntime();
+        }
+
+        return changed;
     }
 
-    public void SaveLayout() => _fileStore.Save(_layoutPath, _layout);
+    public void SaveLayout()
+    {
+        _fileStore.Save(_layoutPath, _layout);
+    }
 
     public void ReloadLayout()
     {
         _layout = _fileStore.Load(_layoutPath);
 
-        if (_selectedItemId is not null && _layout.Items.All(x => x.Id != _selectedItemId.Value))
+        if (_selectedItemId is not null &&
+            !_layout.Items.Any(x => x.Id == _selectedItemId.Value))
         {
             _selectedItemId = null;
         }
 
-        RefreshRuntime();
+        ReloadRuntime();
     }
 
-    private void RefreshRuntime()
+    private void ReloadRuntime()
     {
         var runtimeItems = _composer.Compose(_layout);
         _layoutHost.Load(runtimeItems);
-        _layoutHost.SelectItem(_selectedItemId);
     }
 }
