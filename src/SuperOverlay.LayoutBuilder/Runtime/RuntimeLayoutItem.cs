@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using SuperOverlay.LayoutBuilder.Contracts;
 using SuperOverlay.LayoutBuilder.Layout;
 
@@ -44,6 +45,17 @@ public sealed class RuntimeLayoutItem
         }
 
         Panel.SetZIndex(View, Placement.ZIndex);
+    }
+
+    public void SetSelected(bool isSelected)
+    {
+        if (View is Border border)
+        {
+            border.BorderBrush = isSelected
+                ? new SolidColorBrush(Color.FromRgb(96, 165, 250))
+                : Brushes.Transparent;
+            border.BorderThickness = isSelected ? new Thickness(2) : new Thickness(0);
+        }
     }
 
     public void Update(object runtimeState)

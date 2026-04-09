@@ -52,10 +52,7 @@ public sealed class OverlayRuntimeSession
         _layoutHost.Update(state);
     }
 
-    public IReadOnlyList<DashboardCatalogItem> GetCatalog()
-    {
-        return _registry.GetCatalog();
-    }
+    public IReadOnlyList<DashboardCatalogItem> GetCatalog() => _registry.GetCatalog();
 
     public IReadOnlyList<LayoutEditorItem> GetLayoutItems()
     {
@@ -69,14 +66,12 @@ public sealed class OverlayRuntimeSession
             .ToList();
     }
 
-    public Guid? GetSelectedItemId()
-    {
-        return _selectedItemId;
-    }
+    public Guid? GetSelectedItemId() => _selectedItemId;
 
     public void SelectItem(Guid? itemId)
     {
         _selectedItemId = itemId;
+        _layoutHost.SelectItem(itemId);
     }
 
     public bool AddItem(string typeId)
@@ -103,10 +98,32 @@ public sealed class OverlayRuntimeSession
         return true;
     }
 
-    public void SaveLayout()
+    public bool ResizeSelected(double deltaWidth, double deltaHeight)
     {
-        _fileStore.Save(_layoutPath, _layout);
+        if (_selectedItemId is null)
+        {
+            return false;
+        }
+
+        _layout = _mutationService.ResizeItem(_layout, _selectedItemId.Value, deltaWidth, deltaHeight);
+        RefreshRuntime();
+        return true;
     }
+
+    public bool DeleteSelected()
+    {
+        if (_selectedItemId is null)
+        {
+            return false;
+        }
+
+        _layout = _mutationService.DeleteItem(_layout, _selectedItemId.Value);
+        _selectedItemId = null;
+        RefreshRuntime();
+        return true;
+    }
+
+    public void SaveLayout() => _fileStore.Save(_layoutPath, _layout);
 
     public void ReloadLayout()
     {
@@ -124,5 +141,6 @@ public sealed class OverlayRuntimeSession
     {
         var runtimeItems = _composer.Compose(_layout);
         _layoutHost.Load(runtimeItems);
+        _layoutHost.SelectItem(_selectedItemId);
     }
 }

@@ -12,6 +12,7 @@ namespace SuperOverlay.iRacing;
 public partial class MainWindow : Window
 {
     private const double MoveStep = 10;
+    private const double ResizeStep = 10;
 
     private readonly MockTelemetryProvider _telemetry = new();
     private readonly IRacingMapper _mapper = new();
@@ -86,6 +87,20 @@ public partial class MainWindow : Window
     private void MoveUp_OnClick(object sender, RoutedEventArgs e) => MoveSelected(0, -MoveStep);
     private void MoveDown_OnClick(object sender, RoutedEventArgs e) => MoveSelected(0, MoveStep);
 
+    private void WidthDown_OnClick(object sender, RoutedEventArgs e) => ResizeSelected(-ResizeStep, 0);
+    private void WidthUp_OnClick(object sender, RoutedEventArgs e) => ResizeSelected(ResizeStep, 0);
+    private void HeightDown_OnClick(object sender, RoutedEventArgs e) => ResizeSelected(0, -ResizeStep);
+    private void HeightUp_OnClick(object sender, RoutedEventArgs e) => ResizeSelected(0, ResizeStep);
+
+    private void DeleteSelected_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_session.DeleteSelected())
+        {
+            RefreshItemList();
+            _session.SaveLayout();
+        }
+    }
+
     private void SaveLayout_OnClick(object sender, RoutedEventArgs e)
     {
         _session.SaveLayout();
@@ -147,6 +162,15 @@ public partial class MainWindow : Window
     private void MoveSelected(double deltaX, double deltaY)
     {
         if (_session.MoveSelected(deltaX, deltaY))
+        {
+            RefreshItemList();
+            _session.SaveLayout();
+        }
+    }
+
+    private void ResizeSelected(double deltaWidth, double deltaHeight)
+    {
+        if (_session.ResizeSelected(deltaWidth, deltaHeight))
         {
             RefreshItemList();
             _session.SaveLayout();

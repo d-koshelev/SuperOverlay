@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using SuperOverlay.Dashboards.Runtime;
 using SuperOverlay.LayoutBuilder.Contracts;
 
@@ -7,15 +8,30 @@ namespace SuperOverlay.Dashboards.Items.Gear;
 
 public sealed class GearDashboardPresenter : ILayoutItemPresenter
 {
-    private readonly TextBlock _view = new()
+    private readonly TextBlock _text = new()
     {
         FontSize = 80,
+        FontWeight = FontWeights.SemiBold,
         Text = "-",
-        Foreground = System.Windows.Media.Brushes.White,
-        Margin = new Thickness(0)
+        Foreground = Brushes.White,
+        HorizontalAlignment = HorizontalAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center,
+        TextAlignment = TextAlignment.Center
     };
 
+    private readonly Border _view;
     private GearDashboardSettings _settings = new();
+
+    public GearDashboardPresenter()
+    {
+        _view = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(10),
+            Child = _text
+        };
+    }
 
     public object View => _view;
 
@@ -34,7 +50,7 @@ public sealed class GearDashboardPresenter : ILayoutItemPresenter
 
         var gear = state.Vehicle.Gear;
 
-        _view.Text = gear switch
+        _text.Text = gear switch
         {
             < 0 => "R",
             0 => _settings.ShowNeutralAsN ? "N" : "0",
