@@ -16,6 +16,7 @@ public sealed class OverlayRuntimeSession
 
     private LayoutDocument _layout;
     private Guid? _selectedItemId;
+    private bool _isSnappingEnabled = true;
 
     public OverlayRuntimeSession(
         LayoutHost layoutHost,
@@ -43,6 +44,13 @@ public sealed class OverlayRuntimeSession
         _layout = layout;
 
         ReloadRuntime();
+    }
+
+    public bool IsSnappingEnabled => _isSnappingEnabled;
+
+    public void SetSnappingEnabled(bool isEnabled)
+    {
+        _isSnappingEnabled = isEnabled;
     }
 
     public void Update(object runtimeState)
@@ -73,19 +81,23 @@ public sealed class OverlayRuntimeSession
             .ToList();
     }
 
-    public Guid? GetSelectedItemId()
-    {
-        return _selectedItemId;
-    }
+    public Guid? GetSelectedItemId() => _selectedItemId;
 
     public void SelectItem(Guid? itemId)
     {
         _selectedItemId = itemId;
     }
 
-    public LayoutDocument GetCurrentLayout()
+    public LayoutDocument GetCurrentLayout() => _layout;
+
+    public LayoutItemPlacement? GetSelectedPlacement()
     {
-        return _layout;
+        if (_selectedItemId is null)
+        {
+            return null;
+        }
+
+        return _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
     }
 
     public bool AddItem(string typeId)

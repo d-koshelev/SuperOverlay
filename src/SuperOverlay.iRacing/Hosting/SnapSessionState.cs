@@ -16,16 +16,19 @@ public sealed class AxisSnapState
 {
     public bool IsActive { get; private set; }
     public double Target { get; private set; }
+    public double GuideValue { get; private set; }
 
-    public void Activate(double target)
+    public void Activate(double target, double guideValue)
     {
         IsActive = true;
         Target = target;
+        GuideValue = guideValue;
     }
 
     public void Reset()
     {
         IsActive = false;
         Target = 0;
+        GuideValue = 0;
     }
 }

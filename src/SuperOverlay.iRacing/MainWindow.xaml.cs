@@ -1,11 +1,12 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Threading;
 using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.iRacing.Hosting;
 using SuperOverlay.iRacing.Mapping;
 using SuperOverlay.iRacing.Telemetry.Mock;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace SuperOverlay.iRacing;
 
@@ -23,6 +24,7 @@ public partial class MainWindow : Window
 
     private bool _isDraggingCanvas;
     private Point _lastCanvasPoint;
+    private bool _snapEnabled = true;
 
     public MainWindow()
     {
@@ -31,6 +33,7 @@ public partial class MainWindow : Window
         _session = _bootstrapper.Build(RootGrid);
         RefreshCatalogList();
         RefreshItemList();
+        HideGuides();
 
         _timer = new DispatcherTimer
         {
@@ -54,6 +57,27 @@ public partial class MainWindow : Window
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
+        }
+    }
+
+    private void SnapToggleButton_OnChecked(object sender, RoutedEventArgs e)
+    {
+        _snapEnabled = true;
+
+        if (SnapToggleButton is not null)
+        {
+            SnapToggleButton.Content = "Snap: On";
+        }
+    }
+
+    private void SnapToggleButton_OnUnchecked(object sender, RoutedEventArgs e)
+    {
+        _snapEnabled = false;
+        HideGuides();
+
+        if (SnapToggleButton is not null)
+        {
+            SnapToggleButton.Content = "Snap: Off";
         }
     }
 
@@ -98,6 +122,7 @@ public partial class MainWindow : Window
         {
             RefreshItemList();
             _session.SaveLayout();
+            HideGuides();
         }
     }
 
@@ -110,6 +135,7 @@ public partial class MainWindow : Window
     {
         _session.ReloadLayout();
         RefreshItemList();
+        HideGuides();
     }
 
     private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -144,6 +170,14 @@ public partial class MainWindow : Window
         {
             _lastCanvasPoint = current;
         }
+
+        if (!_snapEnabled || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+        {
+            HideGuides();
+            return;
+        }
+
+        UpdateGuides(current);
     }
 
     private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -157,6 +191,7 @@ public partial class MainWindow : Window
         RootGrid.ReleaseMouseCapture();
         _session.SaveLayout();
         RefreshItemList();
+        HideGuides();
     }
 
     private void MoveSelected(double deltaX, double deltaY)
@@ -191,5 +226,33 @@ public partial class MainWindow : Window
 
         ItemComboBox.ItemsSource = items;
         ItemComboBox.SelectedItem = items.FirstOrDefault(x => x.Id == selectedId) ?? items.FirstOrDefault();
+    }
+
+    private void HideGuides()
+    {
+        if (VerticalGuide is not null)
+        {
+            VerticalGuide.Visibility = Visibility.Collapsed;
+        }
+
+        if (HorizontalGuide is not null)
+        {
+            HorizontalGuide.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void UpdateGuides(Point current)
+    {
+        if (VerticalGuide is not null)
+        {
+            VerticalGuide.Margin = new Thickness(current.X, 0, 0, 0);
+            VerticalGuide.Visibility = Visibility.Visible;
+        }
+
+        if (HorizontalGuide is not null)
+        {
+            HorizontalGuide.Margin = new Thickness(0, current.Y, 0, 0);
+            HorizontalGuide.Visibility = Visibility.Visible;
+        }
     }
 }
