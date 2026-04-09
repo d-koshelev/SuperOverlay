@@ -52,6 +52,11 @@ public sealed class OverlayRuntimeSession
         _layoutHost.Update(state);
     }
 
+    public IReadOnlyList<DashboardCatalogItem> GetCatalog()
+    {
+        return _registry.GetCatalog();
+    }
+
     public IReadOnlyList<LayoutEditorItem> GetLayoutItems()
     {
         return _layout.Items
@@ -72,6 +77,18 @@ public sealed class OverlayRuntimeSession
     public void SelectItem(Guid? itemId)
     {
         _selectedItemId = itemId;
+    }
+
+    public bool AddItem(string typeId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(typeId);
+
+        var offset = _layout.Items.Count * 18;
+        _layout = _mutationService.AddItem(_layout, typeId, 40 + offset, 72 + offset, 160, 60, 20);
+
+        _selectedItemId = _layout.Items.LastOrDefault()?.Id;
+        RefreshRuntime();
+        return _selectedItemId is not null;
     }
 
     public bool MoveSelected(double deltaX, double deltaY)

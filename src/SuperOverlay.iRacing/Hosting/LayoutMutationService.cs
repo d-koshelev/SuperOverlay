@@ -7,6 +7,7 @@ namespace SuperOverlay.iRacing.Hosting;
 public sealed class LayoutMutationService
 {
     private readonly DashboardRegistry _registry;
+    private readonly LayoutDocumentEditor _editor = new();
 
     public LayoutMutationService(DashboardRegistry registry)
     {
@@ -33,11 +34,7 @@ public sealed class LayoutMutationService
         var item = LayoutItemFactory.Create(typeId, serializedSettings);
         var placement = new LayoutItemPlacement(item.Id, x, y, width, height, zIndex);
 
-        return document with
-        {
-            Items = document.Items.Concat(new[] { item }).ToList(),
-            Placements = document.Placements.Concat(new[] { placement }).ToList()
-        };
+        return _editor.AddItem(document, item, placement);
     }
 
     public LayoutDocument MoveItem(
@@ -48,15 +45,41 @@ public sealed class LayoutMutationService
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        var placements = document.Placements
-            .Select(x => x.ItemId == itemId
-                ? x with { X = x.X + deltaX, Y = x.Y + deltaY }
-                : x)
-            .ToList();
+        var existingPlacement = document.Placements.FirstOrDefault(x => x.ItemId == itemId)
+            ?? throw new InvalidOperationException($"Placement for item '{itemId}' was not found.");
 
-        return document with
+        var updatedPlacement = existingPlacement with
         {
-            Placements = placements
+            X = existingPlacement.X + deltaX,
+            Y = existingPlacement.Y + deltaY
         };
+
+        return _editor.UpdatePlacement(document, updatedPlacement);
+    }
+
+    public LayoutDocument ResizeItem(
+        LayoutDocument document,
+        Guid itemId,
+        double deltaWidth,
+        double deltaHeight)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var existingPlacement = document.Placements.FirstOrDefault(x => x.ItemId == itemId)
+            ?? throw new InvalidOperationException($"Placement for item '{itemId}' was not found.");
+
+        var updatedPlacement = existingPlacement with
+        {
+            Width = Math.Max(40, existingPlacement.Width + deltaWidth),
+            Height = Math.Max(24, existingPlacement.Height + deltaHeight)
+        };
+
+        return _editor.UpdatePlacement(document, updatedPlacement);
+    }
+
+    public LayoutDocument DeleteItem(LayoutDocument document, Guid itemId)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return _editor.RemoveItem(document, itemId);
     }
 }

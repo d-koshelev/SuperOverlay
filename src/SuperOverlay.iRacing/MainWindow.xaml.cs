@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
+using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.iRacing.Hosting;
 using SuperOverlay.iRacing.Mapping;
 using SuperOverlay.iRacing.Telemetry.Mock;
@@ -18,11 +20,15 @@ public partial class MainWindow : Window
     private OverlayRuntimeSession _session = null!;
     private DispatcherTimer _timer = null!;
 
+    private bool _isDraggingCanvas;
+    private Point _lastCanvasPoint;
+
     public MainWindow()
     {
         InitializeComponent();
 
         _session = _bootstrapper.Build(RootGrid);
+        RefreshCatalogList();
         RefreshItemList();
 
         _timer = new DispatcherTimer
@@ -42,6 +48,28 @@ public partial class MainWindow : Window
         _session.Update(state);
     }
 
+    private void EditorBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
+    private void AddItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (CatalogComboBox.SelectedItem is not DashboardCatalogItem item)
+        {
+            return;
+        }
+
+        if (_session.AddItem(item.TypeId))
+        {
+            RefreshItemList();
+            _session.SaveLayout();
+        }
+    }
+
     private void ItemComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ItemComboBox.SelectedItem is LayoutEditorItem item)
@@ -53,25 +81,10 @@ public partial class MainWindow : Window
         _session.SelectItem(null);
     }
 
-    private void MoveLeft_OnClick(object sender, RoutedEventArgs e)
-    {
-        MoveSelected(-MoveStep, 0);
-    }
-
-    private void MoveRight_OnClick(object sender, RoutedEventArgs e)
-    {
-        MoveSelected(MoveStep, 0);
-    }
-
-    private void MoveUp_OnClick(object sender, RoutedEventArgs e)
-    {
-        MoveSelected(0, -MoveStep);
-    }
-
-    private void MoveDown_OnClick(object sender, RoutedEventArgs e)
-    {
-        MoveSelected(0, MoveStep);
-    }
+    private void MoveLeft_OnClick(object sender, RoutedEventArgs e) => MoveSelected(-MoveStep, 0);
+    private void MoveRight_OnClick(object sender, RoutedEventArgs e) => MoveSelected(MoveStep, 0);
+    private void MoveUp_OnClick(object sender, RoutedEventArgs e) => MoveSelected(0, -MoveStep);
+    private void MoveDown_OnClick(object sender, RoutedEventArgs e) => MoveSelected(0, MoveStep);
 
     private void SaveLayout_OnClick(object sender, RoutedEventArgs e)
     {
@@ -84,12 +97,67 @@ public partial class MainWindow : Window
         RefreshItemList();
     }
 
+    private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_session.GetSelectedItemId() is null)
+        {
+            return;
+        }
+
+        _isDraggingCanvas = true;
+        _lastCanvasPoint = e.GetPosition(RootGrid);
+        RootGrid.CaptureMouse();
+    }
+
+    private void RootGrid_OnMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isDraggingCanvas || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var current = e.GetPosition(RootGrid);
+        var dx = current.X - _lastCanvasPoint.X;
+        var dy = current.Y - _lastCanvasPoint.Y;
+
+        if (Math.Abs(dx) < double.Epsilon && Math.Abs(dy) < double.Epsilon)
+        {
+            return;
+        }
+
+        if (_session.MoveSelected(dx, dy))
+        {
+            _lastCanvasPoint = current;
+        }
+    }
+
+    private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isDraggingCanvas)
+        {
+            return;
+        }
+
+        _isDraggingCanvas = false;
+        RootGrid.ReleaseMouseCapture();
+        _session.SaveLayout();
+        RefreshItemList();
+    }
+
     private void MoveSelected(double deltaX, double deltaY)
     {
         if (_session.MoveSelected(deltaX, deltaY))
         {
             RefreshItemList();
+            _session.SaveLayout();
         }
+    }
+
+    private void RefreshCatalogList()
+    {
+        var items = _session.GetCatalog();
+        CatalogComboBox.ItemsSource = items;
+        CatalogComboBox.SelectedItem = items.FirstOrDefault();
     }
 
     private void RefreshItemList()
