@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Controls;
+using SuperOverlay.LayoutBuilder.Persistence;
 using SuperOverlay.LayoutBuilder.Runtime;
 
 namespace SuperOverlay.iRacing.Hosting;
@@ -21,11 +22,17 @@ public sealed class OverlayRuntimeBootstrapper
         var layout = layoutProvider.GetOrCreateDefault(layoutPath);
 
         var composer = new LayoutRuntimeComposer(registry);
-        var runtimeItems = composer.Compose(layout);
-
+        var mutationService = new LayoutMutationService(registry);
+        var fileStore = new LayoutFileStore();
         var layoutHost = new LayoutHost(root);
-        layoutHost.Load(runtimeItems);
 
-        return new OverlayRuntimeSession(layoutHost);
+        return new OverlayRuntimeSession(
+            layoutHost,
+            registry,
+            composer,
+            fileStore,
+            mutationService,
+            layoutPath,
+            layout);
     }
 }

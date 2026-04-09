@@ -1,6 +1,7 @@
 using SuperOverlay.LayoutBuilder.Layout;
 using SuperOverlay.LayoutBuilder.Persistence;
 using System.IO;
+
 namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class LayoutDocumentProvider
@@ -19,5 +20,13 @@ public sealed class LayoutDocumentProvider
         var document = DefaultLayoutFactory.Create();
         _fileStore.Save(path, document);
         return document;
+    }
+
+    public void Save(string path, LayoutDocument document)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(document);
+
+        _fileStore.Save(path, document);
     }
 }

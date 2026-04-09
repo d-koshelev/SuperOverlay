@@ -39,4 +39,24 @@ public sealed class LayoutMutationService
             Placements = document.Placements.Concat(new[] { placement }).ToList()
         };
     }
+
+    public LayoutDocument MoveItem(
+        LayoutDocument document,
+        Guid itemId,
+        double deltaX,
+        double deltaY)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var placements = document.Placements
+            .Select(x => x.ItemId == itemId
+                ? x with { X = x.X + deltaX, Y = x.Y + deltaY }
+                : x)
+            .ToList();
+
+        return document with
+        {
+            Placements = placements
+        };
+    }
 }
