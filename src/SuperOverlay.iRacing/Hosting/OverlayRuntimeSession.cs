@@ -137,33 +137,13 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        var sourceItem = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        var sourcePlacement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
-
-        if (sourceItem is null || sourcePlacement is null)
+        var changed = _mutationService.DuplicateItem(ref _layout, _selectedItemId.Value, out var newItemId);
+        if (!changed)
         {
             return false;
         }
 
-        var newId = Guid.NewGuid();
-
-        var duplicatedItem = new LayoutItemInstance(
-            newId,
-            sourceItem.TypeId,
-            sourceItem.Settings);
-
-        var duplicatedPlacement = new LayoutItemPlacement(
-            newId,
-            sourcePlacement.X + 20,
-            sourcePlacement.Y + 20,
-            sourcePlacement.Width,
-            sourcePlacement.Height,
-            sourcePlacement.ZIndex);
-
-        var editor = new LayoutDocumentEditor();
-        _layout = editor.AddItem(_layout, duplicatedItem, duplicatedPlacement);
-        _selectedItemId = newId;
-
+        _selectedItemId = newItemId;
         RefreshRuntime();
         return true;
     }
@@ -260,6 +240,62 @@ public sealed class OverlayRuntimeSession
         }
 
         return changed;
+    }
+
+    public LayoutMoveResult ResizeSelectedWithSnap(
+        double deltaWidth,
+        double deltaHeight,
+        double canvasWidth,
+        double canvasHeight,
+        bool bypassSnap)
+    {
+        if (_selectedItemId is null)
+        {
+            return new LayoutMoveResult(false, null, null);
+        }
+
+        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
+        if (placement is null)
+        {
+            return new LayoutMoveResult(false, null, null);
+        }
+
+        var targetWidth = placement.Width + deltaWidth;
+        var targetHeight = placement.Height + deltaHeight;
+
+        var finalWidth = targetWidth;
+        var finalHeight = targetHeight;
+        double? snapX = null;
+        double? snapY = null;
+
+        if (_snappingEnabled && !bypassSnap)
+        {
+            var snapped = _snapService.SnapResize(
+                _layout,
+                _selectedItemId.Value,
+                targetWidth,
+                targetHeight,
+                canvasWidth,
+                canvasHeight);
+
+            finalWidth = snapped.Width;
+            finalHeight = snapped.Height;
+            snapX = snapped.SnapX;
+            snapY = snapped.SnapY;
+        }
+
+        var changed = _mutationService.ResizeItemTo(
+            ref _layout,
+            _selectedItemId.Value,
+            finalWidth,
+            finalHeight);
+
+        if (changed)
+        {
+            SyncPlacementToRuntime(_selectedItemId.Value);
+        }
+
+        return new LayoutMoveResult(changed, snapX, snapY);
     }
 
     public void EndDrag()

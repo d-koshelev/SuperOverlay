@@ -82,10 +82,23 @@ public sealed class LayoutMutationService
             return false;
         }
 
+        return ResizeItemTo(ref document, itemId, placement.Width + deltaWidth, placement.Height + deltaHeight);
+    }
+
+    public bool ResizeItemTo(ref LayoutDocument document, Guid itemId, double width, double height)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var placement = document.Placements.FirstOrDefault(x => x.ItemId == itemId);
+        if (placement is null)
+        {
+            return false;
+        }
+
         var updatedPlacement = placement with
         {
-            Width = Math.Max(40, placement.Width + deltaWidth),
-            Height = Math.Max(30, placement.Height + deltaHeight)
+            Width = Math.Max(40, width),
+            Height = Math.Max(30, height)
         };
 
         document = _editor.UpdatePlacement(document, updatedPlacement);

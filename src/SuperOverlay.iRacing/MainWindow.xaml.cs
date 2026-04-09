@@ -20,18 +20,26 @@ public partial class MainWindow : Window
     private OverlayRuntimeSession? _session;
     private DispatcherTimer? _timer;
 
-    private bool _isDraggingCanvas;
-    private bool _isResizingItem;
-    private Point _lastCanvasPoint;
+    private bool _isUpdatingItemListSelection;
+
+    private LayoutEditorInteractionController? _interactionController;
+    private LayoutSaveCoordinator? _saveCoordinator;
+    private LayoutGuidePresenter? _guidePresenter;
 
     public MainWindow()
     {
         InitializeComponent();
 
         _session = _bootstrapper.Build(RootGrid);
+        _interactionController = new LayoutEditorInteractionController(_session);
+        _saveCoordinator = new LayoutSaveCoordinator(
+            TimeSpan.FromMilliseconds(250),
+            () => _session?.SaveLayout());
+        _guidePresenter = new LayoutGuidePresenter(VerticalGuide, HorizontalGuide);
+
         _session.SetSnappingEnabled(true);
         RefreshItemList();
-        HideGuides();
+        _guidePresenter.Hide();
 
         if (SnapToggleButton is not null)
         {
@@ -50,7 +58,10 @@ public partial class MainWindow : Window
 
     private void OnTick(object? sender, EventArgs e)
     {
-        if (_session is null) return;
+        if (_session is null)
+        {
+            return;
+        }
 
         var (speed, rpm, gear) = _telemetry.Get();
         var state = _mapper.Map(speed, rpm, gear);
@@ -67,7 +78,10 @@ public partial class MainWindow : Window
 
     private void SnapToggleButton_OnChecked(object sender, RoutedEventArgs e)
     {
-        if (_session is null) return;
+        if (_session is null)
+        {
+            return;
+        }
 
         _session.SetSnappingEnabled(true);
         SnapToggleButton.Content = "Snap: On";
@@ -75,24 +89,32 @@ public partial class MainWindow : Window
 
     private void SnapToggleButton_OnUnchecked(object sender, RoutedEventArgs e)
     {
-        if (_session is null) return;
+        if (_session is null)
+        {
+            return;
+        }
 
         _session.SetSnappingEnabled(false);
         SnapToggleButton.Content = "Snap: Off";
-        HideGuides();
+        _guidePresenter?.Hide();
     }
 
     private void ItemComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_session is null) return;
+        if (_session is null || _isUpdatingItemListSelection)
+        {
+            return;
+        }
 
         if (ItemComboBox.SelectedItem is LayoutEditorItem item)
         {
             _session.SelectItem(item.Id);
+            SyncItemListSelection();
             return;
         }
 
         _session.SelectItem(null);
+        SyncItemListSelection();
     }
 
     private void MoveLeft_OnClick(object sender, RoutedEventArgs e) => MoveSelected(-MoveStep, 0);
@@ -102,121 +124,98 @@ public partial class MainWindow : Window
 
     private void SaveLayout_OnClick(object sender, RoutedEventArgs e)
     {
-        _session?.SaveLayout();
+        _saveCoordinator?.SaveNow();
     }
 
     private void ReloadLayout_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (_session is null) return;
-
-        _session.ReloadLayout();
-        RefreshItemList();
-        HideGuides();
-    }
-
-    private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (_session is null)
         {
             return;
         }
 
-        var hitSource = e.OriginalSource as DependencyObject;
-        var hitItemId = _session.HitTestItemId(hitSource);
+        _saveCoordinator?.CancelPendingSave();
+        _session.ReloadLayout();
+        RefreshItemList();
+        _guidePresenter?.Hide();
+    }
 
-        if (hitItemId is null)
+    private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_session is null || _interactionController is null)
         {
-            _session.SelectItem(null);
-            RefreshItemList();
-            HideGuides();
             return;
         }
 
-        _session.SelectItem(hitItemId.Value);
-        RefreshItemList();
+        var startResult = _interactionController.BeginInteraction(
+            e.OriginalSource as DependencyObject,
+            e.GetPosition(RootGrid));
 
-        _lastCanvasPoint = e.GetPosition(RootGrid);
-        _isResizingItem = _session.IsResizeHandleHit(hitSource, hitItemId.Value);
-        _isDraggingCanvas = !_isResizingItem;
+        SyncItemListSelection();
 
-        RootGrid.CaptureMouse();
-        e.Handled = true;
+        if (startResult.ClearedSelection)
+        {
+            _guidePresenter?.Hide();
+            return;
+        }
+
+        if (startResult.CaptureMouse)
+        {
+            RootGrid.CaptureMouse();
+            e.Handled = true;
+        }
     }
 
     private void RootGrid_OnMouseMove(object sender, MouseEventArgs e)
     {
-        if (_session is null) return;
-
-        var current = e.GetPosition(RootGrid);
-
-        if (_isResizingItem && e.LeftButton == MouseButtonState.Pressed)
-        {
-            var dx = current.X - _lastCanvasPoint.X;
-            var dy = current.Y - _lastCanvasPoint.Y;
-
-            if (Math.Abs(dx) < double.Epsilon && Math.Abs(dy) < double.Epsilon)
-            {
-                return;
-            }
-
-            if (_session.ResizeSelected(dx, dy))
-            {
-                _lastCanvasPoint = current;
-                RefreshItemList();
-            }
-
-            return;
-        }
-
-        if (!_isDraggingCanvas || e.LeftButton != MouseButtonState.Pressed)
+        if (_session is null || _interactionController is null)
         {
             return;
         }
 
-        var dxMove = current.X - _lastCanvasPoint.X;
-        var dyMove = current.Y - _lastCanvasPoint.Y;
-
-        if (Math.Abs(dxMove) < double.Epsilon && Math.Abs(dyMove) < double.Epsilon)
+        if (!_interactionController.IsInteracting || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
         }
 
-        var result = _session.MoveSelectedWithSnap(
-            dxMove,
-            dyMove,
+        var result = _interactionController.MoveInteraction(
+            e.GetPosition(RootGrid),
             RootGrid.ActualWidth,
             RootGrid.ActualHeight,
             Keyboard.Modifiers.HasFlag(ModifierKeys.Alt));
 
-        if (result.Moved)
-        {
-            _lastCanvasPoint = current;
-            RefreshItemList();
-            ShowGuides(result);
-        }
-    }
-
-    private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_session is null) return;
-
-        if (!_isDraggingCanvas && !_isResizingItem)
+        if (!result.Changed)
         {
             return;
         }
 
-        _isDraggingCanvas = false;
-        _isResizingItem = false;
+        _guidePresenter?.Show(new LayoutMoveResult(result.Changed, result.SnapX, result.SnapY));
+    }
+
+    private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_interactionController is null)
+        {
+            return;
+        }
+
+        if (!_interactionController.EndInteraction())
+        {
+            return;
+        }
+
         RootGrid.ReleaseMouseCapture();
-        _session.EndDrag();
-        _session.SaveLayout();
-        RefreshItemList();
-        HideGuides();
+        QueueSaveLayout();
+        SyncItemListSelection();
+        _guidePresenter?.Hide();
     }
 
     private void MoveSelected(double deltaX, double deltaY)
     {
-        if (_session is null) return;
+        if (_session is null)
+        {
+            return;
+        }
 
         var result = _session.MoveSelectedWithSnap(
             deltaX,
@@ -227,58 +226,54 @@ public partial class MainWindow : Window
 
         if (result.Moved)
         {
-            RefreshItemList();
-            _session.SaveLayout();
-            ShowGuides(result);
+            QueueSaveLayout();
+            _guidePresenter?.Show(result);
         }
     }
 
     private void RefreshItemList()
     {
-        if (_session is null) return;
+        if (_session is null)
+        {
+            return;
+        }
 
         var items = _session.GetLayoutItems();
-        var selectedId = _session.GetSelectedItemId();
 
+        _isUpdatingItemListSelection = true;
         ItemComboBox.ItemsSource = items;
-        ItemComboBox.SelectedItem = selectedId is null
+        _isUpdatingItemListSelection = false;
+
+        SyncItemListSelection();
+    }
+
+    private void SyncItemListSelection()
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var selectedId = _session.GetSelectedItemId();
+        var items = ItemComboBox.ItemsSource as IEnumerable<LayoutEditorItem>;
+        var selectedItem = selectedId is null || items is null
             ? null
             : items.FirstOrDefault(x => x.Id == selectedId.Value);
+
+        _isUpdatingItemListSelection = true;
+        ItemComboBox.SelectedItem = selectedItem;
+        _isUpdatingItemListSelection = false;
     }
 
-    private void HideGuides()
+    private void QueueSaveLayout()
     {
-        if (VerticalGuide is not null)
-        {
-            VerticalGuide.Visibility = Visibility.Collapsed;
-        }
-
-        if (HorizontalGuide is not null)
-        {
-            HorizontalGuide.Visibility = Visibility.Collapsed;
-        }
+        _saveCoordinator?.QueueSave();
     }
 
-    private void ShowGuides(LayoutMoveResult result)
+    protected override void OnClosed(EventArgs e)
     {
-        if (result.SnapX is not null)
-        {
-            VerticalGuide.Margin = new Thickness(result.SnapX.Value, 0, 0, 0);
-            VerticalGuide.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            VerticalGuide.Visibility = Visibility.Collapsed;
-        }
-
-        if (result.SnapY is not null)
-        {
-            HorizontalGuide.Margin = new Thickness(0, result.SnapY.Value, 0, 0);
-            HorizontalGuide.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            HorizontalGuide.Visibility = Visibility.Collapsed;
-        }
+        _saveCoordinator?.SaveNow();
+        _timer?.Stop();
+        base.OnClosed(e);
     }
 }
