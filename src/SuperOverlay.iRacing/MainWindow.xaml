@@ -6,7 +6,8 @@
         Height="540"
         WindowStyle="None"
         Background="#FFE5E7EB"
-        Topmost="True">
+        Topmost="True"
+        KeyDown="Window_OnKeyDown">
 
     <DockPanel>
         <Border x:Name="EditorBar"
@@ -54,6 +55,11 @@
                           Width="220"
                           DisplayMemberPath="DisplayText"
                           SelectionChanged="ItemComboBox_OnSelectionChanged"/>
+
+                <Button Content="Duplicate"
+                        Margin="12,0,0,0"
+                        Padding="10,4"
+                        Click="DuplicateSelected_OnClick"/>
 
                 <Button Content="←"
                         Width="32"

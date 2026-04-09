@@ -12,11 +12,12 @@ public sealed class OverlayRuntimeSession
     private readonly LayoutRuntimeComposer _composer;
     private readonly LayoutFileStore _fileStore;
     private readonly LayoutMutationService _mutationService;
+    private readonly LayoutSnapService _snapService = new();
     private readonly string _layoutPath;
 
     private LayoutDocument _layout;
     private Guid? _selectedItemId;
-    private bool _isSnappingEnabled = true;
+    private bool _snappingEnabled = true;
 
     public OverlayRuntimeSession(
         LayoutHost layoutHost,
@@ -46,16 +47,14 @@ public sealed class OverlayRuntimeSession
         ReloadRuntime();
     }
 
-    public bool IsSnappingEnabled => _isSnappingEnabled;
-
-    public void SetSnappingEnabled(bool isEnabled)
-    {
-        _isSnappingEnabled = isEnabled;
-    }
-
     public void Update(object runtimeState)
     {
         _layoutHost.Update(runtimeState);
+    }
+
+    public void SetSnappingEnabled(bool enabled)
+    {
+        _snappingEnabled = enabled;
     }
 
     public IReadOnlyList<DashboardCatalogItem> GetCatalog()
@@ -81,23 +80,19 @@ public sealed class OverlayRuntimeSession
             .ToList();
     }
 
-    public Guid? GetSelectedItemId() => _selectedItemId;
+    public Guid? GetSelectedItemId()
+    {
+        return _selectedItemId;
+    }
 
     public void SelectItem(Guid? itemId)
     {
         _selectedItemId = itemId;
     }
 
-    public LayoutDocument GetCurrentLayout() => _layout;
-
-    public LayoutItemPlacement? GetSelectedPlacement()
+    public LayoutDocument GetCurrentLayout()
     {
-        if (_selectedItemId is null)
-        {
-            return null;
-        }
-
-        return _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
+        return _layout;
     }
 
     public bool AddItem(string typeId)
@@ -110,6 +105,44 @@ public sealed class OverlayRuntimeSession
         }
 
         return changed;
+    }
+
+    public bool DuplicateSelected()
+    {
+        if (_selectedItemId is null)
+        {
+            return false;
+        }
+
+        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
+        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
+
+        if (item is null || placement is null)
+        {
+            return false;
+        }
+
+        var duplicatedId = Guid.NewGuid();
+
+        var duplicatedItem = new LayoutItemInstance(
+            duplicatedId,
+            item.TypeId,
+            item.Settings);
+
+        var duplicatedPlacement = new LayoutItemPlacement(
+            duplicatedId,
+            placement.X + 20,
+            placement.Y + 20,
+            placement.Width,
+            placement.Height,
+            placement.ZIndex);
+
+        var editor = new LayoutDocumentEditor();
+        _layout = editor.AddItem(_layout, duplicatedItem, duplicatedPlacement);
+        _selectedItemId = duplicatedId;
+
+        ReloadRuntime();
+        return true;
     }
 
     public bool MoveSelected(double deltaX, double deltaY)
@@ -127,6 +160,67 @@ public sealed class OverlayRuntimeSession
         }
 
         return changed;
+    }
+
+    public LayoutMoveResult MoveSelectedWithSnap(
+        double deltaX,
+        double deltaY,
+        double canvasWidth,
+        double canvasHeight,
+        bool bypassSnap)
+    {
+        if (_selectedItemId is null)
+        {
+            return new LayoutMoveResult(false, null, null);
+        }
+
+        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
+        if (placement is null)
+        {
+            return new LayoutMoveResult(false, null, null);
+        }
+
+        var targetX = placement.X + deltaX;
+        var targetY = placement.Y + deltaY;
+
+        double finalX = targetX;
+        double finalY = targetY;
+        double? snapX = null;
+        double? snapY = null;
+
+        if (_snappingEnabled && !bypassSnap)
+        {
+            var snapped = _snapService.SnapPosition(
+                _layout,
+                _selectedItemId.Value,
+                targetX,
+                targetY,
+                canvasWidth,
+                canvasHeight);
+
+            finalX = snapped.X;
+            finalY = snapped.Y;
+            snapX = snapped.SnapX;
+            snapY = snapped.SnapY;
+        }
+
+        var changed = _mutationService.MoveItem(
+            ref _layout,
+            _selectedItemId.Value,
+            finalX - placement.X,
+            finalY - placement.Y);
+
+        if (changed)
+        {
+            ReloadRuntime();
+        }
+
+        return new LayoutMoveResult(changed, snapX, snapY);
+    }
+
+    public void EndDrag()
+    {
+        _snapService.EndDrag();
     }
 
     public bool ResizeSelected(double deltaWidth, double deltaHeight)

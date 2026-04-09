@@ -4,146 +4,210 @@ namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class LayoutSnapService
 {
-    private const double SnapThreshold = 8;
-    private const double ReleaseThreshold = 14;
+    private const double SnapThreshold = 10;
+    private const double ReleaseThreshold = 16;
 
-    public SnapMoveResult SnapMove(
+    private bool _snapActiveX;
+    private bool _snapActiveY;
+    private double? _snapValueX;
+    private double? _snapValueY;
+
+    public (double X, double Y, double? SnapX, double? SnapY) SnapPosition(
         LayoutDocument layout,
         Guid movingItemId,
-        LayoutItemPlacement currentPlacement,
-        double deltaX,
-        double deltaY,
+        double targetX,
+        double targetY,
         double canvasWidth,
-        double canvasHeight,
-        SnapSessionState snapState,
-        bool isEnabled)
+        double canvasHeight)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        ArgumentNullException.ThrowIfNull(currentPlacement);
-        ArgumentNullException.ThrowIfNull(snapState);
 
-        var rawX = currentPlacement.X + deltaX;
-        var rawY = currentPlacement.Y + deltaY;
-
-        if (!isEnabled)
+        var placement = layout.Placements.FirstOrDefault(x => x.ItemId == movingItemId);
+        if (placement is null)
         {
-            snapState.Reset();
-            return new SnapMoveResult(rawX, rawY, null, null);
+            return (targetX, targetY, null, null);
         }
 
-        var xResult = SnapAxisX(layout, movingItemId, currentPlacement, rawX, canvasWidth, snapState.X);
-        var yResult = SnapAxisY(layout, movingItemId, currentPlacement, rawY, canvasHeight, snapState.Y);
+        var width = placement.Width;
+        var height = placement.Height;
 
-        return new SnapMoveResult(xResult.SnappedValue, yResult.SnappedValue, xResult.GuideValue, yResult.GuideValue);
+        var candidateX = FindSnapX(layout, movingItemId, targetX, width, canvasWidth);
+        var candidateY = FindSnapY(layout, movingItemId, targetY, height, canvasHeight);
+
+        var finalX = ApplyAxisHysteresis(
+            targetX,
+            candidateX,
+            ref _snapActiveX,
+            ref _snapValueX);
+
+        var finalY = ApplyAxisHysteresis(
+            targetY,
+            candidateY,
+            ref _snapActiveY,
+            ref _snapValueY);
+
+        return (
+            finalX,
+            finalY,
+            _snapActiveX ? _snapValueX : null,
+            _snapActiveY ? _snapValueY : null);
     }
 
-    private static AxisResult SnapAxisX(
+    public void EndDrag()
+    {
+        _snapActiveX = false;
+        _snapActiveY = false;
+        _snapValueX = null;
+        _snapValueY = null;
+    }
+
+    private static double ApplyAxisHysteresis(
+        double target,
+        double? candidate,
+        ref bool snapActive,
+        ref double? snapValue)
+    {
+        if (!snapActive)
+        {
+            if (candidate is not null && Math.Abs(target - candidate.Value) <= SnapThreshold)
+            {
+                snapActive = true;
+                snapValue = candidate.Value;
+                return candidate.Value;
+            }
+
+            return target;
+        }
+
+        if (snapValue is null)
+        {
+            snapActive = false;
+            return target;
+        }
+
+        if (Math.Abs(target - snapValue.Value) <= ReleaseThreshold)
+        {
+            return snapValue.Value;
+        }
+
+        snapActive = false;
+        snapValue = null;
+
+        if (candidate is not null && Math.Abs(target - candidate.Value) <= SnapThreshold)
+        {
+            snapActive = true;
+            snapValue = candidate.Value;
+            return candidate.Value;
+        }
+
+        return target;
+    }
+
+    private static double? FindSnapX(
         LayoutDocument layout,
         Guid movingItemId,
-        LayoutItemPlacement moving,
-        double rawX,
-        double canvasWidth,
-        AxisSnapState state)
+        double targetX,
+        double width,
+        double canvasWidth)
     {
-        var candidates = new List<AxisCandidate>
+        var candidates = new List<double>
         {
-            new(0, 0),
-            new(Math.Max(0, canvasWidth - moving.Width), Math.Max(0, canvasWidth - moving.Width))
+            // canvas edges / center
+            0,                              // left -> canvas left
+            canvasWidth - width,            // right -> canvas right
+            canvasWidth / 2 - width / 2     // center -> canvas center
         };
 
         foreach (var other in layout.Placements.Where(x => x.ItemId != movingItemId))
         {
             var otherLeft = other.X;
             var otherRight = other.X + other.Width;
-            var otherCenter = other.X + other.Width / 2.0;
+            var otherCenter = other.X + other.Width / 2;
 
-            candidates.Add(new(otherLeft, otherLeft));
-            candidates.Add(new(otherRight, otherRight));
-            candidates.Add(new(otherRight - moving.Width, otherRight));
-            candidates.Add(new(otherLeft - moving.Width, otherLeft));
-            candidates.Add(new(otherCenter - moving.Width / 2.0, otherCenter));
+            // left -> left
+            candidates.Add(otherLeft);
+
+            // left -> right
+            candidates.Add(otherRight);
+
+            // right -> left
+            candidates.Add(otherLeft - width);
+
+            // right -> right
+            candidates.Add(otherRight - width);
+
+            // center -> center
+            candidates.Add(otherCenter - width / 2);
         }
 
-        return ResolveAxis(rawX, candidates, state);
+        double? best = null;
+        var bestDistance = double.MaxValue;
+
+        foreach (var candidate in candidates)
+        {
+            var distance = Math.Abs(targetX - candidate);
+
+            if (distance < bestDistance)
+            {
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
     }
 
-    private static AxisResult SnapAxisY(
+    private static double? FindSnapY(
         LayoutDocument layout,
         Guid movingItemId,
-        LayoutItemPlacement moving,
-        double rawY,
-        double canvasHeight,
-        AxisSnapState state)
+        double targetY,
+        double height,
+        double canvasHeight)
     {
-        var candidates = new List<AxisCandidate>
+        var candidates = new List<double>
         {
-            new(0, 0),
-            new(Math.Max(0, canvasHeight - moving.Height), Math.Max(0, canvasHeight - moving.Height))
+            // canvas edges / center
+            0,                               // top -> canvas top
+            canvasHeight - height,           // bottom -> canvas bottom
+            canvasHeight / 2 - height / 2    // center -> canvas center
         };
 
         foreach (var other in layout.Placements.Where(x => x.ItemId != movingItemId))
         {
             var otherTop = other.Y;
             var otherBottom = other.Y + other.Height;
-            var otherCenter = other.Y + other.Height / 2.0;
+            var otherCenter = other.Y + other.Height / 2;
 
-            candidates.Add(new(otherTop, otherTop));
-            candidates.Add(new(otherBottom, otherBottom));
-            candidates.Add(new(otherBottom - moving.Height, otherBottom));
-            candidates.Add(new(otherTop - moving.Height, otherTop));
-            candidates.Add(new(otherCenter - moving.Height / 2.0, otherCenter));
+            // top -> top
+            candidates.Add(otherTop);
+
+            // top -> bottom
+            candidates.Add(otherBottom);
+
+            // bottom -> top
+            candidates.Add(otherTop - height);
+
+            // bottom -> bottom
+            candidates.Add(otherBottom - height);
+
+            // center -> center
+            candidates.Add(otherCenter - height / 2);
         }
 
-        return ResolveAxis(rawY, candidates, state);
-    }
-
-    private static AxisResult ResolveAxis(double rawValue, List<AxisCandidate> candidates, AxisSnapState state)
-    {
-        AxisCandidate? nearest = null;
-        double nearestDistance = double.MaxValue;
+        double? best = null;
+        var bestDistance = double.MaxValue;
 
         foreach (var candidate in candidates)
         {
-            var distance = Math.Abs(rawValue - candidate.SnappedValue);
-            if (distance < nearestDistance)
+            var distance = Math.Abs(targetY - candidate);
+
+            if (distance < bestDistance)
             {
-                nearest = candidate;
-                nearestDistance = distance;
+                best = candidate;
+                bestDistance = distance;
             }
         }
 
-        if (nearest is null)
-        {
-            state.Reset();
-            return new AxisResult(rawValue, null);
-        }
-
-        if (state.IsActive)
-        {
-            var activeDistance = Math.Abs(rawValue - state.Target);
-            if (activeDistance <= ReleaseThreshold)
-            {
-                return new AxisResult(state.Target, state.GuideValue);
-            }
-
-            state.Reset();
-        }
-
-        if (nearestDistance <= SnapThreshold)
-        {
-            state.Activate(nearest.SnappedValue, nearest.GuideValue);
-            return new AxisResult(nearest.SnappedValue, nearest.GuideValue);
-        }
-
-        return new AxisResult(rawValue, null);
+        return best;
     }
-
-    private sealed record AxisCandidate(double SnappedValue, double GuideValue);
-    private sealed record AxisResult(double SnappedValue, double? GuideValue);
 }
-
-public sealed record SnapMoveResult(
-    double X,
-    double Y,
-    double? VerticalGuideX,
-    double? HorizontalGuideY);

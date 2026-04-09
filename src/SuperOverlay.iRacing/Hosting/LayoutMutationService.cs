@@ -49,10 +49,23 @@ public sealed class LayoutMutationService
             return false;
         }
 
+        return MoveItemTo(ref document, itemId, placement.X + deltaX, placement.Y + deltaY);
+    }
+
+    public bool MoveItemTo(ref LayoutDocument document, Guid itemId, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var placement = document.Placements.FirstOrDefault(xp => xp.ItemId == itemId);
+        if (placement is null)
+        {
+            return false;
+        }
+
         var updatedPlacement = placement with
         {
-            X = placement.X + deltaX,
-            Y = placement.Y + deltaY
+            X = x,
+            Y = y
         };
 
         document = _editor.UpdatePlacement(document, updatedPlacement);
@@ -89,6 +102,34 @@ public sealed class LayoutMutationService
         }
 
         document = _editor.RemoveItem(document, itemId);
+        return true;
+    }
+
+    public bool DuplicateItem(ref LayoutDocument document, Guid itemId, out Guid newItemId)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var sourceItem = document.Items.FirstOrDefault(x => x.Id == itemId);
+        var sourcePlacement = document.Placements.FirstOrDefault(x => x.ItemId == itemId);
+
+        if (sourceItem is null || sourcePlacement is null)
+        {
+            newItemId = Guid.Empty;
+            return false;
+        }
+
+        newItemId = Guid.NewGuid();
+
+        var duplicatedItem = sourceItem with { Id = newItemId };
+        var duplicatedPlacement = sourcePlacement with
+        {
+            ItemId = newItemId,
+            X = sourcePlacement.X + 20,
+            Y = sourcePlacement.Y + 20,
+            ZIndex = sourcePlacement.ZIndex + 1
+        };
+
+        document = _editor.AddItem(document, duplicatedItem, duplicatedPlacement);
         return true;
     }
 }

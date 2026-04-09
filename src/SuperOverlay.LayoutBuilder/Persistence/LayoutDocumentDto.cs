@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SuperOverlay.LayoutBuilder.Layout;
 
 namespace SuperOverlay.LayoutBuilder.Persistence;
@@ -59,9 +60,6 @@ public sealed class LayoutItemInstanceDto
 {
     public Guid Id { get; set; }
     public string TypeId { get; set; } = string.Empty;
-
-    // Пока храним сырой JSON settings как string.
-    // Позже можно сделать typed materialization через registry/settings type.
     public string SettingsJson { get; set; } = "{}";
 
     public LayoutItemInstance ToInstance()
@@ -71,11 +69,30 @@ public sealed class LayoutItemInstanceDto
 
     public static LayoutItemInstanceDto FromInstance(LayoutItemInstance instance)
     {
+        ArgumentNullException.ThrowIfNull(instance);
+
+        string settingsJson;
+
+        if (instance.Settings is null)
+        {
+            settingsJson = "{}";
+        }
+        else if (instance.Settings is string rawString)
+        {
+            settingsJson = rawString;
+        }
+        else
+        {
+            settingsJson = JsonSerializer.Serialize(
+                instance.Settings,
+                instance.Settings.GetType());
+        }
+
         return new LayoutItemInstanceDto
         {
             Id = instance.Id,
             TypeId = instance.TypeId,
-            SettingsJson = instance.Settings?.ToString() ?? "{}"
+            SettingsJson = settingsJson
         };
     }
 }

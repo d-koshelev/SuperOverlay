@@ -19,21 +19,28 @@ public partial class MainWindow : Window
     private readonly IRacingMapper _mapper = new();
     private readonly OverlayRuntimeBootstrapper _bootstrapper = new();
 
-    private OverlayRuntimeSession _session = null!;
-    private DispatcherTimer _timer = null!;
+    private OverlayRuntimeSession? _session;
+    private DispatcherTimer? _timer;
 
     private bool _isDraggingCanvas;
     private Point _lastCanvasPoint;
-    private bool _snapEnabled = true;
 
     public MainWindow()
     {
         InitializeComponent();
 
         _session = _bootstrapper.Build(RootGrid);
+        _session.SetSnappingEnabled(true);
+
         RefreshCatalogList();
         RefreshItemList();
         HideGuides();
+
+        if (SnapToggleButton is not null)
+        {
+            SnapToggleButton.IsChecked = true;
+            SnapToggleButton.Content = "Snap: On";
+        }
 
         _timer = new DispatcherTimer
         {
@@ -46,6 +53,11 @@ public partial class MainWindow : Window
 
     private void OnTick(object? sender, EventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         var (speed, rpm, gear) = _telemetry.Get();
         var state = _mapper.Map(speed, rpm, gear);
 
@@ -62,27 +74,34 @@ public partial class MainWindow : Window
 
     private void SnapToggleButton_OnChecked(object sender, RoutedEventArgs e)
     {
-        _snapEnabled = true;
-
-        if (SnapToggleButton is not null)
+        if (_session is null)
         {
-            SnapToggleButton.Content = "Snap: On";
+            return;
         }
+
+        _session.SetSnappingEnabled(true);
+        SnapToggleButton.Content = "Snap: On";
     }
 
     private void SnapToggleButton_OnUnchecked(object sender, RoutedEventArgs e)
     {
-        _snapEnabled = false;
-        HideGuides();
-
-        if (SnapToggleButton is not null)
+        if (_session is null)
         {
-            SnapToggleButton.Content = "Snap: Off";
+            return;
         }
+
+        _session.SetSnappingEnabled(false);
+        SnapToggleButton.Content = "Snap: Off";
+        HideGuides();
     }
 
     private void AddItem_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         if (CatalogComboBox.SelectedItem is not DashboardCatalogItem item)
         {
             return;
@@ -95,8 +114,27 @@ public partial class MainWindow : Window
         }
     }
 
+    private void DuplicateSelected_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        if (_session.DuplicateSelected())
+        {
+            RefreshItemList();
+            _session.SaveLayout();
+        }
+    }
+
     private void ItemComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         if (ItemComboBox.SelectedItem is LayoutEditorItem item)
         {
             _session.SelectItem(item.Id);
@@ -118,6 +156,11 @@ public partial class MainWindow : Window
 
     private void DeleteSelected_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         if (_session.DeleteSelected())
         {
             RefreshItemList();
@@ -128,11 +171,16 @@ public partial class MainWindow : Window
 
     private void SaveLayout_OnClick(object sender, RoutedEventArgs e)
     {
-        _session.SaveLayout();
+        _session?.SaveLayout();
     }
 
     private void ReloadLayout_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         _session.ReloadLayout();
         RefreshItemList();
         HideGuides();
@@ -140,7 +188,7 @@ public partial class MainWindow : Window
 
     private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (_session.GetSelectedItemId() is null)
+        if (_session?.GetSelectedItemId() is null)
         {
             return;
         }
@@ -152,6 +200,11 @@ public partial class MainWindow : Window
 
     private void RootGrid_OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         if (!_isDraggingCanvas || e.LeftButton != MouseButtonState.Pressed)
         {
             return;
@@ -166,22 +219,27 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_session.MoveSelected(dx, dy))
+        var result = _session.MoveSelectedWithSnap(
+            dx,
+            dy,
+            RootGrid.ActualWidth,
+            RootGrid.ActualHeight,
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Alt));
+
+        if (result.Moved)
         {
             _lastCanvasPoint = current;
+            ShowGuides(result);
         }
-
-        if (!_snapEnabled || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
-        {
-            HideGuides();
-            return;
-        }
-
-        UpdateGuides(current);
     }
 
     private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         if (!_isDraggingCanvas)
         {
             return;
@@ -189,22 +247,123 @@ public partial class MainWindow : Window
 
         _isDraggingCanvas = false;
         RootGrid.ReleaseMouseCapture();
+        _session.EndDrag();
         _session.SaveLayout();
         RefreshItemList();
         HideGuides();
     }
 
+    private void Window_OnKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.S)
+        {
+            _session.SaveLayout();
+            e.Handled = true;
+            return;
+        }
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.D)
+        {
+            if (_session.DuplicateSelected())
+            {
+                RefreshItemList();
+                _session.SaveLayout();
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Delete)
+        {
+            if (_session.DeleteSelected())
+            {
+                RefreshItemList();
+                _session.SaveLayout();
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            switch (e.Key)
+            {
+                case Key.Left:
+                    ResizeSelected(-ResizeStep, 0);
+                    e.Handled = true;
+                    return;
+                case Key.Right:
+                    ResizeSelected(ResizeStep, 0);
+                    e.Handled = true;
+                    return;
+                case Key.Up:
+                    ResizeSelected(0, -ResizeStep);
+                    e.Handled = true;
+                    return;
+                case Key.Down:
+                    ResizeSelected(0, ResizeStep);
+                    e.Handled = true;
+                    return;
+            }
+        }
+
+        switch (e.Key)
+        {
+            case Key.Left:
+                MoveSelected(-MoveStep, 0);
+                e.Handled = true;
+                break;
+            case Key.Right:
+                MoveSelected(MoveStep, 0);
+                e.Handled = true;
+                break;
+            case Key.Up:
+                MoveSelected(0, -MoveStep);
+                e.Handled = true;
+                break;
+            case Key.Down:
+                MoveSelected(0, MoveStep);
+                e.Handled = true;
+                break;
+        }
+    }
+
     private void MoveSelected(double deltaX, double deltaY)
     {
-        if (_session.MoveSelected(deltaX, deltaY))
+        if (_session is null)
+        {
+            return;
+        }
+
+        var result = _session.MoveSelectedWithSnap(
+            deltaX,
+            deltaY,
+            RootGrid.ActualWidth,
+            RootGrid.ActualHeight,
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Alt));
+
+        if (result.Moved)
         {
             RefreshItemList();
             _session.SaveLayout();
+            ShowGuides(result);
         }
     }
 
     private void ResizeSelected(double deltaWidth, double deltaHeight)
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         if (_session.ResizeSelected(deltaWidth, deltaHeight))
         {
             RefreshItemList();
@@ -214,6 +373,11 @@ public partial class MainWindow : Window
 
     private void RefreshCatalogList()
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         var items = _session.GetCatalog();
         CatalogComboBox.ItemsSource = items;
         CatalogComboBox.SelectedItem = items.FirstOrDefault();
@@ -221,6 +385,11 @@ public partial class MainWindow : Window
 
     private void RefreshItemList()
     {
+        if (_session is null)
+        {
+            return;
+        }
+
         var items = _session.GetLayoutItems();
         var selectedId = _session.GetSelectedItemId();
 
@@ -230,29 +399,30 @@ public partial class MainWindow : Window
 
     private void HideGuides()
     {
-        if (VerticalGuide is not null)
+        VerticalGuide.Visibility = Visibility.Collapsed;
+        HorizontalGuide.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowGuides(LayoutMoveResult result)
+    {
+        if (result.SnapX is not null)
+        {
+            VerticalGuide.Margin = new Thickness(result.SnapX.Value, 0, 0, 0);
+            VerticalGuide.Visibility = Visibility.Visible;
+        }
+        else
         {
             VerticalGuide.Visibility = Visibility.Collapsed;
         }
 
-        if (HorizontalGuide is not null)
+        if (result.SnapY is not null)
+        {
+            HorizontalGuide.Margin = new Thickness(0, result.SnapY.Value, 0, 0);
+            HorizontalGuide.Visibility = Visibility.Visible;
+        }
+        else
         {
             HorizontalGuide.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    private void UpdateGuides(Point current)
-    {
-        if (VerticalGuide is not null)
-        {
-            VerticalGuide.Margin = new Thickness(current.X, 0, 0, 0);
-            VerticalGuide.Visibility = Visibility.Visible;
-        }
-
-        if (HorizontalGuide is not null)
-        {
-            HorizontalGuide.Margin = new Thickness(0, current.Y, 0, 0);
-            HorizontalGuide.Visibility = Visibility.Visible;
         }
     }
 }

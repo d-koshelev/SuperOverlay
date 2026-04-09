@@ -21,8 +21,15 @@ public sealed class SpeedDashboardDefinition : IDashboardDefinition
 
         if (rawSettings is string json && !string.IsNullOrWhiteSpace(json))
         {
-            return JsonSerializer.Deserialize<SpeedDashboardSettings>(json)
-                   ?? new SpeedDashboardSettings();
+            try
+            {
+                return JsonSerializer.Deserialize<SpeedDashboardSettings>(json)
+                       ?? new SpeedDashboardSettings();
+            }
+            catch (JsonException)
+            {
+                return new SpeedDashboardSettings();
+            }
         }
 
         return new SpeedDashboardSettings();

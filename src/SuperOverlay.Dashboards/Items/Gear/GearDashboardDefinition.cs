@@ -21,8 +21,15 @@ public sealed class GearDashboardDefinition : IDashboardDefinition
 
         if (rawSettings is string json && !string.IsNullOrWhiteSpace(json))
         {
-            return JsonSerializer.Deserialize<GearDashboardSettings>(json)
-                   ?? new GearDashboardSettings();
+            try
+            {
+                return JsonSerializer.Deserialize<GearDashboardSettings>(json)
+                       ?? new GearDashboardSettings();
+            }
+            catch (JsonException)
+            {
+                return new GearDashboardSettings();
+            }
         }
 
         return new GearDashboardSettings();
