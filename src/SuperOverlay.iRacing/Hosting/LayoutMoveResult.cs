@@ -1,4 +1,4 @@
-﻿namespace SuperOverlay.iRacing.Hosting;
+namespace SuperOverlay.iRacing.Hosting;
 
 public sealed record LayoutMoveResult(
     bool Moved,

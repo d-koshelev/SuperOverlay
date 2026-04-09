@@ -26,6 +26,11 @@ public sealed class RuntimeLayoutItem
         Placement = placement;
         Presenter = presenter;
         View = (UIElement)presenter.View;
+
+        if (View is FrameworkElement fe)
+        {
+            fe.Tag = item.Id;
+        }
     }
 
     public void ApplySettings()

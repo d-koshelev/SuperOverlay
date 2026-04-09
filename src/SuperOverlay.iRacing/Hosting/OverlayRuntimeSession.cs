@@ -44,7 +44,7 @@ public sealed class OverlayRuntimeSession
         _layoutPath = layoutPath;
         _layout = layout;
 
-        ReloadRuntime();
+        RefreshRuntime();
     }
 
     public void Update(object runtimeState)
@@ -59,8 +59,7 @@ public sealed class OverlayRuntimeSession
 
     public IReadOnlyList<DashboardCatalogItem> GetCatalog()
     {
-        return _registry
-            .GetCatalog()
+        return _registry.GetCatalog()
             .OrderBy(x => x.DisplayName)
             .ToList();
     }
@@ -80,20 +79,9 @@ public sealed class OverlayRuntimeSession
             .ToList();
     }
 
-    public Guid? GetSelectedItemId()
-    {
-        return _selectedItemId;
-    }
+    public Guid? GetSelectedItemId() => _selectedItemId;
 
-    public void SelectItem(Guid? itemId)
-    {
-        _selectedItemId = itemId;
-    }
-
-    public LayoutDocument GetCurrentLayout()
-    {
-        return _layout;
-    }
+    public void SelectItem(Guid? itemId) => _selectedItemId = itemId;
 
     public bool AddItem(string typeId)
     {
@@ -101,7 +89,25 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            ReloadRuntime();
+            RefreshRuntime();
+        }
+
+        return changed;
+    }
+
+    public bool DeleteSelected()
+    {
+        if (_selectedItemId is null)
+        {
+            return false;
+        }
+
+        var changed = _mutationService.DeleteItem(ref _layout, _selectedItemId.Value);
+
+        if (changed)
+        {
+            _selectedItemId = null;
+            RefreshRuntime();
         }
 
         return changed;
@@ -114,34 +120,34 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
+        var sourceItem = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
+        var sourcePlacement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
 
-        if (item is null || placement is null)
+        if (sourceItem is null || sourcePlacement is null)
         {
             return false;
         }
 
-        var duplicatedId = Guid.NewGuid();
+        var newId = Guid.NewGuid();
 
         var duplicatedItem = new LayoutItemInstance(
-            duplicatedId,
-            item.TypeId,
-            item.Settings);
+            newId,
+            sourceItem.TypeId,
+            sourceItem.Settings);
 
         var duplicatedPlacement = new LayoutItemPlacement(
-            duplicatedId,
-            placement.X + 20,
-            placement.Y + 20,
-            placement.Width,
-            placement.Height,
-            placement.ZIndex);
+            newId,
+            sourcePlacement.X + 20,
+            sourcePlacement.Y + 20,
+            sourcePlacement.Width,
+            sourcePlacement.Height,
+            sourcePlacement.ZIndex);
 
         var editor = new LayoutDocumentEditor();
         _layout = editor.AddItem(_layout, duplicatedItem, duplicatedPlacement);
-        _selectedItemId = duplicatedId;
+        _selectedItemId = newId;
 
-        ReloadRuntime();
+        RefreshRuntime();
         return true;
     }
 
@@ -156,7 +162,7 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            ReloadRuntime();
+            RefreshRuntime();
         }
 
         return changed;
@@ -183,8 +189,8 @@ public sealed class OverlayRuntimeSession
         var targetX = placement.X + deltaX;
         var targetY = placement.Y + deltaY;
 
-        double finalX = targetX;
-        double finalY = targetY;
+        var finalX = targetX;
+        var finalY = targetY;
         double? snapX = null;
         double? snapY = null;
 
@@ -212,15 +218,10 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            ReloadRuntime();
+            RefreshRuntime();
         }
 
         return new LayoutMoveResult(changed, snapX, snapY);
-    }
-
-    public void EndDrag()
-    {
-        _snapService.EndDrag();
     }
 
     public bool ResizeSelected(double deltaWidth, double deltaHeight)
@@ -238,29 +239,15 @@ public sealed class OverlayRuntimeSession
 
         if (changed)
         {
-            ReloadRuntime();
+            RefreshRuntime();
         }
 
         return changed;
     }
 
-    public bool DeleteSelected()
+    public void EndDrag()
     {
-        if (_selectedItemId is null)
-        {
-            return false;
-        }
-
-        var itemId = _selectedItemId.Value;
-        var changed = _mutationService.DeleteItem(ref _layout, itemId);
-
-        if (changed)
-        {
-            _selectedItemId = null;
-            ReloadRuntime();
-        }
-
-        return changed;
+        _snapService.EndDrag();
     }
 
     public void SaveLayout()
@@ -278,10 +265,10 @@ public sealed class OverlayRuntimeSession
             _selectedItemId = null;
         }
 
-        ReloadRuntime();
+        RefreshRuntime();
     }
 
-    private void ReloadRuntime()
+    private void RefreshRuntime()
     {
         var runtimeItems = _composer.Compose(_layout);
         _layoutHost.Load(runtimeItems);
