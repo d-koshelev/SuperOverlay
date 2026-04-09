@@ -18,18 +18,12 @@ public sealed class LayoutRuntimeComposer
     {
         ArgumentNullException.ThrowIfNull(layout);
 
-        var result = new List<RuntimeLayoutItem>();
+        var result = new List<RuntimeLayoutItem>(layout.Items.Count);
+        var placementIndex = new LayoutPlacementIndex(layout.Placements);
 
         foreach (var item in layout.Items)
         {
-            var placement = layout.Placements.FirstOrDefault(x => x.ItemId == item.Id);
-
-            if (placement is null)
-            {
-                throw new InvalidOperationException(
-                    $"Placement for item '{item.Id}' was not found.");
-            }
-
+            var placement = placementIndex.GetRequired(item.Id);
             var definition = _registry.Get(item.TypeId);
             var presenter = definition.CreatePresenter();
             var settings = definition.MaterializeSettings(item.Settings);

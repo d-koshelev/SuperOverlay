@@ -1,6 +1,7 @@
+using System.IO;
 using System.Windows.Controls;
 using SuperOverlay.LayoutBuilder.Runtime;
-using System.IO;
+
 namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class OverlayRuntimeBootstrapper
