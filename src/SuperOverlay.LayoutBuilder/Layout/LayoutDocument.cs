@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
-namespace SuperOverlay.LayoutBuilder.Layout
-{
-    internal class LayoutDocument
-    {
-    }
-}
+namespace SuperOverlay.LayoutBuilder.Layout;
+
+public sealed record LayoutDocument(
+    string Version,
+    string Name,
+    LayoutCanvas Canvas,
+    IReadOnlyList<LayoutItemInstance> Items,
+    IReadOnlyList<LayoutItemPlacement> Placements);

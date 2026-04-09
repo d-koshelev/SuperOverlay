@@ -1,4 +1,4 @@
-﻿namespace SuperOverlay.iRacing.Telemetry;
+﻿namespace SuperOverlay.iRacing.Telemetry.Mock;
 
 public sealed class MockTelemetryProvider
 {

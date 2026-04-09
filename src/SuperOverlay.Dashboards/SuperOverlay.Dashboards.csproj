@@ -11,7 +11,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Contracts\" />
 	  <Folder Include="Items\Fuel\" />
 	  <Folder Include="Items\Relative\" />
 	  <Folder Include="Items\Pedals\" />

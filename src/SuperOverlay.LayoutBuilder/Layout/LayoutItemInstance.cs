@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SuperOverlay.LayoutBuilder.Layout
-{
-    internal class LayoutItemInstance
-    {
-    }
-}
+namespace SuperOverlay.LayoutBuilder.Layout;
+
+public sealed record LayoutItemInstance(
+    Guid Id,
+    string TypeId,
+    object Settings);

@@ -1,12 +1,45 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows.Controls;
 
-namespace SuperOverlay.LayoutBuilder
+namespace SuperOverlay.LayoutBuilder.Runtime;
+
+public sealed class LayoutHost
 {
-    internal class LayoutHost
+    private readonly Grid _root;
+    private readonly List<RuntimeLayoutItem> _items = new();
+
+    public LayoutHost(Grid root)
     {
+        ArgumentNullException.ThrowIfNull(root);
+
+        _root = root;
+    }
+
+    public IReadOnlyList<RuntimeLayoutItem> Items => _items;
+
+    public void Clear()
+    {
+        _root.Children.Clear();
+        _items.Clear();
+    }
+
+    public void AddItem(RuntimeLayoutItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        item.ApplySettings();
+        item.ApplyPlacement();
+
+        _items.Add(item);
+        _root.Children.Add(item.View);
+    }
+
+    public void Update(object runtimeState)
+    {
+        foreach (var item in _items)
+        {
+            item.Update(runtimeState);
+        }
     }
 }

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SuperOverlay.LayoutBuilder.Contracts;
+using System;
 
-namespace SuperOverlay.Dashboards.Contracts
+namespace SuperOverlay.Dashboards.Contracts;
+
+public interface IDashboardDefinition : ILayoutItemDefinition
 {
-    internal interface IDashboardDefinition
-    {
-    }
+    Type SettingsType { get; }
 }

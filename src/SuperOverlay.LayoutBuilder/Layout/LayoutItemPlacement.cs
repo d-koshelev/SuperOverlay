@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SuperOverlay.LayoutBuilder.Layout
-{
-    internal class LayoutItemPlacement
-    {
-    }
-}
+namespace SuperOverlay.LayoutBuilder.Layout;
+
+public sealed record LayoutItemPlacement(
+    Guid ItemId,
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    int ZIndex);

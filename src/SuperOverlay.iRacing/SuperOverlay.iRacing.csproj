@@ -5,6 +5,12 @@
     <ProjectReference Include="..\SuperOverlay.Dashboards\SuperOverlay.Dashboards.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Configuration\" />
+    <Folder Include="Bootstrap\" />
+    <Folder Include="Telemetry\Live\" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
 	  <TargetFramework>net8.0-windows</TargetFramework>
