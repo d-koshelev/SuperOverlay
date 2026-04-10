@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using WpfWindow = System.Windows.Window;
 using SuperOverlay.iRacing.Editor.WidgetSettings;
 using SuperOverlay.iRacing.Hosting;
 using WpfTextBox = System.Windows.Controls.TextBox;
@@ -10,21 +11,17 @@ namespace SuperOverlay.iRacing.Editor;
 
 public sealed class EditorPropertiesPanelController
 {
-    private readonly Window _owner;
+    private readonly WpfWindow _owner;
     private readonly EditorPropertiesPanelView _view;
     private readonly Func<OverlayRuntimeSession?> _getSession;
-    private readonly IReadOnlyList<IEditorWidgetSettingsBinder> _widgetSettingsBinders;
+    private readonly EditorWidgetSettingsBinderRegistry _widgetSettingsBinderRegistry;
 
-    public EditorPropertiesPanelController(Window owner, EditorPropertiesPanelView view, Func<OverlayRuntimeSession?> getSession)
+    public EditorPropertiesPanelController(WpfWindow owner, EditorPropertiesPanelView view, Func<OverlayRuntimeSession?> getSession, EditorWidgetSettingsBinderRegistry widgetSettingsBinderRegistry)
     {
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         _view = view ?? throw new ArgumentNullException(nameof(view));
         _getSession = getSession ?? throw new ArgumentNullException(nameof(getSession));
-        _widgetSettingsBinders = new IEditorWidgetSettingsBinder[]
-        {
-            new ShiftLedWidgetSettingsBinder(),
-            new DecorativePanelWidgetSettingsBinder()
-        };
+        _widgetSettingsBinderRegistry = widgetSettingsBinderRegistry ?? throw new ArgumentNullException(nameof(widgetSettingsBinderRegistry));
     }
 
     public void Refresh()
@@ -59,25 +56,9 @@ public sealed class EditorPropertiesPanelController
         _view.ZIndexTextBox.Text = properties.ZIndex.ToString(CultureInfo.CurrentCulture);
         _view.LockedCheckBox.IsChecked = properties.IsLocked;
 
-        var commonCorners = session.GetSelectedWidgetCornerSettings();
-        if (commonCorners is null)
-        {
-            _view.CommonCornerSettingsPanel.Visibility = Visibility.Collapsed;
-            _view.CommonCornerTopLeftTextBox.Text = string.Empty;
-            _view.CommonCornerTopRightTextBox.Text = string.Empty;
-            _view.CommonCornerBottomRightTextBox.Text = string.Empty;
-            _view.CommonCornerBottomLeftTextBox.Text = string.Empty;
-        }
-        else
-        {
-            _view.CommonCornerSettingsPanel.Visibility = Visibility.Visible;
-            _view.CommonCornerTopLeftTextBox.Text = EditorNumericText.FormatDouble(commonCorners.TopLeft);
-            _view.CommonCornerTopRightTextBox.Text = EditorNumericText.FormatDouble(commonCorners.TopRight);
-            _view.CommonCornerBottomRightTextBox.Text = EditorNumericText.FormatDouble(commonCorners.BottomRight);
-            _view.CommonCornerBottomLeftTextBox.Text = EditorNumericText.FormatDouble(commonCorners.BottomLeft);
-        }
+        EditorCornerText.Populate(_view, session.GetSelectedWidgetCornerSettings());
 
-        foreach (var binder in _widgetSettingsBinders)
+        foreach (var binder in _widgetSettingsBinderRegistry.Binders)
         {
             binder.Refresh(session, _view);
         }
@@ -116,23 +97,20 @@ public sealed class EditorPropertiesPanelController
 
         if (_view.CommonCornerSettingsPanel.Visibility == Visibility.Visible)
         {
-            if (!EditorNumericText.TryParseNonNegativeDouble(_view.CommonCornerTopLeftTextBox.Text, out var commonCornerTopLeft) ||
-                !EditorNumericText.TryParseNonNegativeDouble(_view.CommonCornerTopRightTextBox.Text, out var commonCornerTopRight) ||
-                !EditorNumericText.TryParseNonNegativeDouble(_view.CommonCornerBottomRightTextBox.Text, out var commonCornerBottomRight) ||
-                !EditorNumericText.TryParseNonNegativeDouble(_view.CommonCornerBottomLeftTextBox.Text, out var commonCornerBottomLeft))
+            if (!EditorCornerText.TryRead(_view, out var commonCorners))
             {
                 EditorValidationMessages.ShowInvalidCornerProperties(_owner);
                 Refresh();
                 return false;
             }
 
-            if (session.UpdateSelectedWidgetCornerSettings(commonCornerTopLeft, commonCornerTopRight, commonCornerBottomRight, commonCornerBottomLeft))
+            if (session.UpdateSelectedWidgetCornerSettings(commonCorners.TopLeft, commonCorners.TopRight, commonCorners.BottomRight, commonCorners.BottomLeft))
             {
                 anyChanged = true;
             }
         }
 
-        foreach (var binder in _widgetSettingsBinders)
+        foreach (var binder in _widgetSettingsBinderRegistry.Binders)
         {
             if (binder.Apply(session, _view, _owner))
             {
@@ -167,9 +145,4 @@ public sealed class EditorPropertiesPanelController
         targetTextBox.Text = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
     }
 
-
-    internal static bool TryParseNonNegativeDouble(string? text, out double value)
-    {
-        return EditorNumericText.TryParseNonNegativeDouble(text, out value);
-    }
 }

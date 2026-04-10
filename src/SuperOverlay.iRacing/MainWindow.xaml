@@ -200,201 +200,275 @@
                                   CanContentScroll="True">
                         <StackPanel x:Name="PropertiesPanel"
                                     IsEnabled="False">
-                        <TextBlock Text="Widget"
-                                   Foreground="#FF6B7280"/>
-                        <TextBlock x:Name="SelectedWidgetNameTextBlock"
-                                   Margin="0,2,0,0"
-                                   Foreground="#FF1F2937"
-                                   FontWeight="SemiBold"/>
-                        <TextBlock x:Name="SelectedWidgetMetaTextBlock"
-                                   Margin="0,2,0,12"
-                                   Foreground="#FF6B7280"
-                                   FontSize="11"
-                                   TextWrapping="Wrap"/>
+                            <Border Background="#FFFFFFFF"
+                                    BorderBrush="#FFE5E7EB"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12">
+                                <StackPanel>
+                                    <TextBlock Text="Selection"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,4,0,0"
+                                               Text="Widget"
+                                               Foreground="#FF6B7280"/>
+                                    <TextBlock x:Name="SelectedWidgetNameTextBlock"
+                                               Margin="0,2,0,0"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="SelectedWidgetMetaTextBlock"
+                                               Margin="0,2,0,0"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
 
-                        <UniformGrid Columns="2" Margin="0,0,0,8">
-                            <StackPanel Margin="0,0,6,0">
-                                <TextBlock Text="X" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="XTextBox" Margin="0,4,0,0"/>
-                            </StackPanel>
-                            <StackPanel Margin="6,0,0,0">
-                                <TextBlock Text="Y" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="YTextBox" Margin="0,4,0,0"/>
-                            </StackPanel>
-                        </UniformGrid>
+                            <Border Margin="0,12,0,0"
+                                    Background="#FFFFFFFF"
+                                    BorderBrush="#FFE5E7EB"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12">
+                                <StackPanel>
+                                    <TextBlock Text="Placement"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,4,0,8"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="These values define the selected widget position, size, layer order and lock state inside the current layout."/>
 
-                        <UniformGrid Columns="2" Margin="0,0,0,8">
-                            <StackPanel Margin="0,0,6,0">
-                                <TextBlock Text="Width" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="WidthTextBox" Margin="0,4,0,0"/>
-                            </StackPanel>
-                            <StackPanel Margin="6,0,0,0">
-                                <TextBlock Text="Height" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="HeightTextBox" Margin="0,4,0,0"/>
-                            </StackPanel>
-                        </UniformGrid>
+                                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="X" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="XTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="6,0,0,0">
+                                            <TextBlock Text="Y" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="YTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </UniformGrid>
 
-                        <UniformGrid Columns="2" Margin="0,0,0,8">
-                            <StackPanel Margin="0,0,6,0">
-                                <TextBlock Text="Z-Index" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="ZIndexTextBox" Margin="0,4,0,0"/>
-                            </StackPanel>
-                            <StackPanel Margin="6,20,0,0">
-                                <CheckBox x:Name="LockedCheckBox"
-                                          Content="Locked"
-                                          Foreground="#FF1F2937"/>
-                            </StackPanel>
-                        </UniformGrid>
+                                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="Width" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="WidthTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="6,0,0,0">
+                                            <TextBlock Text="Height" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="HeightTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </UniformGrid>
 
-                        <StackPanel x:Name="CommonCornerSettingsPanel"
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="Z-Index" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="ZIndexTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="6,20,0,0">
+                                            <CheckBox x:Name="LockedCheckBox"
+                                                      Content="Locked"
+                                                      Foreground="#FF1F2937"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel x:Name="CommonCornerSettingsPanel"
+                                        Margin="0,12,0,0"
+                                        Visibility="Collapsed">
+                                <Border Background="#FFFFFFFF"
+                                        BorderBrush="#FFE5E7EB"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Visual"
+                                                   Foreground="#FF1F2937"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Margin="0,4,0,8"
+                                                   Foreground="#FF6B7280"
+                                                   FontSize="11"
+                                                   Text="Shared style values applied to widgets that expose generic visual settings."/>
+
+                                        <TextBlock Text="Widget corners"
+                                                   Foreground="#FF1F2937"
+                                                   FontWeight="SemiBold"/>
+
+                                        <UniformGrid Columns="2" Margin="0,8,0,0">
+                                            <StackPanel Margin="0,0,6,0">
+                                                <TextBlock Text="Top-left radius" Foreground="#FF6B7280"/>
+                                                <TextBox x:Name="CommonCornerTopLeftTextBox" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Margin="6,0,0,0">
+                                                <TextBlock Text="Top-right radius" Foreground="#FF6B7280"/>
+                                                <TextBox x:Name="CommonCornerTopRightTextBox" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+
+                                        <UniformGrid Columns="2" Margin="0,8,0,0">
+                                            <StackPanel Margin="0,0,6,0">
+                                                <TextBlock Text="Bottom-right radius" Foreground="#FF6B7280"/>
+                                                <TextBox x:Name="CommonCornerBottomRightTextBox" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Margin="6,0,0,0">
+                                                <TextBlock Text="Bottom-left radius" Foreground="#FF6B7280"/>
+                                                <TextBox x:Name="CommonCornerBottomLeftTextBox" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Foreground="#FF6B7280"
+                                                   FontSize="11"
+                                                   Text="Corner radii are applied to the selected widget. Default is 0 so widgets can glue together without gaps."/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel x:Name="ShiftLedSettingsPanel"
+                                        Margin="0,12,0,0"
+                                        Visibility="Collapsed">
+                                <Border Background="#FFFFFFFF"
+                                        BorderBrush="#FFE5E7EB"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Widget settings"
+                                                   Foreground="#FF1F2937"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Margin="0,4,0,8"
+                                                   Foreground="#FF6B7280"
+                                                   FontSize="11"
+                                                   Text="These options belong specifically to the selected LED Shift Panel widget."/>
+
+                                        <TextBlock Text="LED Shift Panel"
+                                                   Foreground="#FF1F2937"
+                                                   FontWeight="SemiBold"/>
+
+                                        <UniformGrid Columns="2" Margin="0,8,0,0">
+                                            <StackPanel Margin="0,0,6,0">
+                                                <TextBlock Text="LED count" Foreground="#FF6B7280"/>
+                                                <TextBox x:Name="ShiftLedCountTextBox" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Margin="6,20,0,0">
+                                                <CheckBox x:Name="ShiftUsePerLedColorsCheckBox"
+                                                          Content="Use per-LED colors"
+                                                          Foreground="#FF1F2937"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+
+                                        <CheckBox x:Name="ShiftShowBackgroundCheckBox"
+                                                  Margin="0,8,0,0"
+                                                  Content="Show background"
+                                                  Foreground="#FF1F2937"/>
+
+                                        <StackPanel Margin="0,8,0,0">
+                                            <TextBlock Text="Background color" Foreground="#FF6B7280"/>
+                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                                <Button Content="Pick"
+                                                        Width="44"
+                                                        Margin="8,0,0,0"
+                                                        DockPanel.Dock="Right"
+                                                        Click="PickShiftBackgroundColor_OnClick"/>
+                                                <TextBox x:Name="ShiftBackgroundColorTextBox"/>
+                                            </DockPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Margin="0,8,0,0">
+                                            <TextBlock Text="LED off color" Foreground="#FF6B7280"/>
+                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                                <Button Content="Pick"
+                                                        Width="44"
+                                                        Margin="8,0,0,0"
+                                                        DockPanel.Dock="Right"
+                                                        Click="PickShiftOffColor_OnClick"/>
+                                                <TextBox x:Name="ShiftOffColorTextBox"/>
+                                            </DockPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Margin="0,8,0,0">
+                                            <TextBlock Text="Fallback LED on color" Foreground="#FF6B7280"/>
+                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                                <Button Content="Pick"
+                                                        Width="44"
+                                                        Margin="8,0,0,0"
+                                                        DockPanel.Dock="Right"
+                                                        Click="PickShiftOnColor_OnClick"/>
+                                                <TextBox x:Name="ShiftOnColorTextBox"/>
+                                            </DockPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Margin="0,8,0,0">
+                                            <TextBlock Text="Per-LED colors" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="ShiftOnColorsTextBox"
+                                                     Margin="0,4,0,0"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="Wrap"
+                                                     MinHeight="74"
+                                                     VerticalScrollBarVisibility="Auto"/>
+                                        </StackPanel>
+
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Foreground="#FF6B7280"
+                                                   FontSize="11"
+                                                   Text="Use WPF color values like #20262E or #E6111827. Per-LED colors can be comma, semicolon or line separated. Turn off per-LED colors to use one shared on-color for all lamps."/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel x:Name="DecorativePanelSettingsPanel"
+                                        Margin="0,12,0,0"
+                                        Visibility="Collapsed">
+                                <Border Background="#FFFFFFFF"
+                                        BorderBrush="#FFE5E7EB"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Widget settings"
+                                                   Foreground="#FF1F2937"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Margin="0,4,0,8"
+                                                   Foreground="#FF6B7280"
+                                                   FontSize="11"
+                                                   Text="These options belong specifically to the selected Decorative Panel widget."/>
+
+                                        <TextBlock Text="Decorative Panel"
+                                                   Foreground="#FF1F2937"
+                                                   FontWeight="SemiBold"/>
+
+                                        <StackPanel Margin="0,8,0,0">
+                                            <TextBlock Text="Background color" Foreground="#FF6B7280"/>
+                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                                <Button Content="Pick"
+                                                        Width="44"
+                                                        Margin="8,0,0,0"
+                                                        DockPanel.Dock="Right"
+                                                        Click="PickDecorativeBackgroundColor_OnClick"/>
+                                                <TextBox x:Name="DecorativeBackgroundColorTextBox"/>
+                                            </DockPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Margin="0,8,0,0">
+                                            <TextBlock Text="Opacity" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="DecorativeOpacityTextBox"
+                                                     Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <TextBlock Margin="0,8,0,0"
+                                                   Foreground="#FF6B7280"
+                                                   FontSize="11"
+                                                   Text="Decorative panel uses a WPF color value like #20262E or #CC1F2937. Opacity uses a value from 0 to 1."/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <Button Content="Apply"
                                     Margin="0,12,0,0"
-                                    Visibility="Collapsed">
-                            <Separator Margin="0,0,0,12"/>
-                            <TextBlock Text="Widget corners"
-                                       Foreground="#FF1F2937"
-                                       FontWeight="SemiBold"/>
-
-                            <UniformGrid Columns="2" Margin="0,8,0,0">
-                                <StackPanel Margin="0,0,6,0">
-                                    <TextBlock Text="Top-left radius" Foreground="#FF6B7280"/>
-                                    <TextBox x:Name="CommonCornerTopLeftTextBox" Margin="0,4,0,0"/>
-                                </StackPanel>
-                                <StackPanel Margin="6,0,0,0">
-                                    <TextBlock Text="Top-right radius" Foreground="#FF6B7280"/>
-                                    <TextBox x:Name="CommonCornerTopRightTextBox" Margin="0,4,0,0"/>
-                                </StackPanel>
-                            </UniformGrid>
-
-                            <UniformGrid Columns="2" Margin="0,8,0,0">
-                                <StackPanel Margin="0,0,6,0">
-                                    <TextBlock Text="Bottom-right radius" Foreground="#FF6B7280"/>
-                                    <TextBox x:Name="CommonCornerBottomRightTextBox" Margin="0,4,0,0"/>
-                                </StackPanel>
-                                <StackPanel Margin="6,0,0,0">
-                                    <TextBlock Text="Bottom-left radius" Foreground="#FF6B7280"/>
-                                    <TextBox x:Name="CommonCornerBottomLeftTextBox" Margin="0,4,0,0"/>
-                                </StackPanel>
-                            </UniformGrid>
-
-                            <TextBlock Margin="0,8,0,0"
-                                       Foreground="#FF6B7280"
-                                       FontSize="11"
-                                       Text="Corner radii are applied to the selected widget. Default is 0 so widgets can glue together without gaps."/>
-                        </StackPanel>
-
-                        <StackPanel x:Name="ShiftLedSettingsPanel"
-                                    Margin="0,12,0,0"
-                                    Visibility="Collapsed">
-                            <Separator Margin="0,0,0,12"/>
-                            <TextBlock Text="LED Shift Panel"
-                                       Foreground="#FF1F2937"
-                                       FontWeight="SemiBold"/>
-
-                            <UniformGrid Columns="2" Margin="0,8,0,0">
-                                <StackPanel Margin="0,0,6,0">
-                                    <TextBlock Text="LED count" Foreground="#FF6B7280"/>
-                                    <TextBox x:Name="ShiftLedCountTextBox" Margin="0,4,0,0"/>
-                                </StackPanel>
-                                <StackPanel Margin="6,20,0,0">
-                                    <CheckBox x:Name="ShiftUsePerLedColorsCheckBox"
-                                              Content="Use per-LED colors"
-                                              Foreground="#FF1F2937"/>
-                                </StackPanel>
-                            </UniformGrid>
-
-                            <CheckBox x:Name="ShiftShowBackgroundCheckBox"
-                                      Margin="0,8,0,0"
-                                      Content="Show background"
-                                      Foreground="#FF1F2937"/>
-
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="Background color" Foreground="#FF6B7280"/>
-                                <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                    <Button Content="Pick"
-                                            Width="44"
-                                            Margin="8,0,0,0"
-                                            DockPanel.Dock="Right"
-                                            Click="PickShiftBackgroundColor_OnClick"/>
-                                    <TextBox x:Name="ShiftBackgroundColorTextBox"/>
-                                </DockPanel>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="LED off color" Foreground="#FF6B7280"/>
-                                <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                    <Button Content="Pick"
-                                            Width="44"
-                                            Margin="8,0,0,0"
-                                            DockPanel.Dock="Right"
-                                            Click="PickShiftOffColor_OnClick"/>
-                                    <TextBox x:Name="ShiftOffColorTextBox"/>
-                                </DockPanel>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="Fallback LED on color" Foreground="#FF6B7280"/>
-                                <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                    <Button Content="Pick"
-                                            Width="44"
-                                            Margin="8,0,0,0"
-                                            DockPanel.Dock="Right"
-                                            Click="PickShiftOnColor_OnClick"/>
-                                    <TextBox x:Name="ShiftOnColorTextBox"/>
-                                </DockPanel>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="Per-LED colors" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="ShiftOnColorsTextBox"
-                                         Margin="0,4,0,0"
-                                         AcceptsReturn="True"
-                                         TextWrapping="Wrap"
-                                         MinHeight="74"
-                                         VerticalScrollBarVisibility="Auto"/>
-                            </StackPanel>
-
-                            <TextBlock Margin="0,8,0,0"
-                                       Foreground="#FF6B7280"
-                                       FontSize="11"
-                                       Text="Use WPF color values like #20262E or #E6111827. Per-LED colors can be comma, semicolon or line separated. Turn off per-LED colors to use one shared on-color for all lamps."/>
-                        </StackPanel>
-
-                        <StackPanel x:Name="DecorativePanelSettingsPanel"
-                                    Margin="0,12,0,0"
-                                    Visibility="Collapsed">
-                            <Separator Margin="0,0,0,12"/>
-                            <TextBlock Text="Decorative Panel"
-                                       Foreground="#FF1F2937"
-                                       FontWeight="SemiBold"/>
-
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="Background color" Foreground="#FF6B7280"/>
-                                <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                    <Button Content="Pick"
-                                            Width="44"
-                                            Margin="8,0,0,0"
-                                            DockPanel.Dock="Right"
-                                            Click="PickDecorativeBackgroundColor_OnClick"/>
-                                    <TextBox x:Name="DecorativeBackgroundColorTextBox"/>
-                                </DockPanel>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="Opacity" Foreground="#FF6B7280"/>
-                                <TextBox x:Name="DecorativeOpacityTextBox"
-                                         Margin="0,4,0,0"/>
-                            </StackPanel>
-
-                            <TextBlock Margin="0,8,0,0"
-                                       Foreground="#FF6B7280"
-                                       FontSize="11"
-                                       Text="Decorative panel uses a WPF color value like #20262E or #CC1F2937. Opacity uses a value from 0 to 1."/>
-                        </StackPanel>
-
-                        <Button Content="Apply"
-                                Margin="0,12,0,0"
-                                Padding="10,6"
-                                Click="ApplyProperties_OnClick"/>
+                                    Padding="10,6"
+                                    Click="ApplyProperties_OnClick"/>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

@@ -1,8 +1,10 @@
-using System.Windows.Controls;
 using System.Windows;
-using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
-using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
+using System.Windows.Controls;
 using System.Windows.Input;
+using WpfWindow = System.Windows.Window;
+using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfMouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
+using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using System.Windows.Threading;
 using SuperOverlay.LayoutBuilder.Runtime;
 using SuperOverlay.iRacing.Hosting;
@@ -12,7 +14,7 @@ using SuperOverlay.iRacing.Telemetry.Mock;
 
 namespace SuperOverlay.iRacing;
 
-public partial class MainWindow : Window
+public partial class MainWindow : WpfWindow
 {
     private readonly MockTelemetryProvider _telemetry = new();
     private readonly IRacingMapper _mapper = new();
@@ -21,6 +23,7 @@ public partial class MainWindow : Window
     private OverlayRuntimeSession? _session;
     private DispatcherTimer? _timer;
     private LayoutEditorInteractionController? _interactionController;
+    private MainWindowInteractionController? _interactionWindowController;
     private LayoutSaveCoordinator? _saveCoordinator;
     private LayoutGuidePresenter? _guidePresenter;
     private EditorPropertiesPanelController? _propertiesController;
@@ -35,20 +38,23 @@ public partial class MainWindow : Window
         _interactionController = new LayoutEditorInteractionController(_session);
         _saveCoordinator = new LayoutSaveCoordinator(TimeSpan.FromMilliseconds(250), () => _session?.SaveLayout());
         _guidePresenter = new LayoutGuidePresenter(VerticalGuide, HorizontalGuide);
-        _propertiesController = new EditorPropertiesPanelController(this, CreatePropertiesPanelView(), () => _session);
-        _commandController = new MainWindowCommandController(
+        var controllers = MainWindowControllerFactory.Create(
+            this,
+            CreatePropertiesPanelView(),
+            CreateCanvasView(),
             () => _session,
+            _interactionController,
             _saveCoordinator!,
             _guidePresenter!,
             () => RootGrid.ActualWidth,
             () => RootGrid.ActualHeight,
             RefreshCatalog,
-            RefreshPropertiesPanel,
-            () => _canvasController?.HideSelectionMarquee());
-        _canvasController = new MainWindowCanvasController(
-            CreateCanvasView(),
-            () => _session,
             RefreshPropertiesPanel);
+
+        _propertiesController = controllers.Properties;
+        _commandController = controllers.Commands;
+        _canvasController = controllers.Canvas;
+        _interactionWindowController = controllers.Interaction;
 
         _session.SetSnappingEnabled(true);
         RefreshCatalog();
@@ -75,7 +81,7 @@ public partial class MainWindow : Window
         _session.Update(_mapper.Map(speed, rpm, gear, shiftLightPercent));
     }
 
-    private void EditorBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void EditorBar_MouseLeftButtonDown(object sender, WpfMouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)
         {
@@ -90,7 +96,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _session.SetSnappingEnabled(true);
+        _interactionWindowController?.SetSnappingEnabled(true);
         SnapToggleButton.Content = "Snap: On";
     }
 
@@ -101,10 +107,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        _session.SetSnappingEnabled(false);
+        _interactionWindowController?.SetSnappingEnabled(false);
         SnapToggleButton.Content = "Snap: Off";
-        _guidePresenter?.Hide();
-        _canvasController?.HideSelectionMarquee();
     }
 
     private void SaveLayout_OnClick(object sender, RoutedEventArgs e) => _commandController?.SaveNow();
@@ -132,7 +136,7 @@ public partial class MainWindow : Window
     private void BringToFront_OnClick(object sender, RoutedEventArgs e) => _commandController?.BringToFront();
     private void SendToBack_OnClick(object sender, RoutedEventArgs e) => _commandController?.SendToBack();
 
-    private void RootGrid_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    private void RootGrid_OnPreviewMouseRightButtonDown(object sender, WpfMouseButtonEventArgs e)
     {
         Focus();
 
@@ -151,30 +155,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void RootGrid_OnMouseLeftButtonDown(object sender, WpfMouseButtonEventArgs e)
     {
-        if (_session is null || _interactionController is null)
-        {
-            return;
-        }
-
         Focus();
 
-        var startResult = _interactionController.BeginInteraction(e.OriginalSource as DependencyObject, e.GetPosition(RootGrid), Keyboard.Modifiers);
-        if (startResult.ShowMarquee && startResult.MarqueeRect is Rect startRect)
-        {
-            _canvasController?.ShowSelectionMarquee(startRect);
-            _guidePresenter?.Hide();
-        }
-
-        RefreshPropertiesPanel();
-
-        if (startResult.ClearedSelection)
-        {
-            _guidePresenter?.Hide();
-        }
-
-        if (startResult.CaptureMouse)
+        if (_interactionWindowController?.BeginInteraction(e.OriginalSource as DependencyObject, e.GetPosition(RootGrid), Keyboard.Modifiers) == true)
         {
             RootGrid.CaptureMouse();
             e.Handled = true;
@@ -182,54 +167,14 @@ public partial class MainWindow : Window
     }
 
     private void RootGrid_OnMouseMove(object sender, WpfMouseEventArgs e)
+        => _interactionWindowController?.MoveInteraction(e.GetPosition(RootGrid), Keyboard.Modifiers, e.LeftButton);
+
+    private void RootGrid_OnMouseLeftButtonUp(object sender, WpfMouseButtonEventArgs e)
     {
-        if (_interactionController is null)
+        if (_interactionWindowController?.EndInteraction(Keyboard.Modifiers) == true)
         {
-            return;
+            RootGrid.ReleaseMouseCapture();
         }
-
-        if (!_interactionController.IsInteracting || e.LeftButton != MouseButtonState.Pressed)
-        {
-            return;
-        }
-
-        var result = _interactionController.MoveInteraction(e.GetPosition(RootGrid), RootGrid.ActualWidth, RootGrid.ActualHeight, Keyboard.Modifiers.HasFlag(ModifierKeys.Alt));
-
-        if (_interactionController.IsMarqueeSelecting)
-        {
-            if (result.MarqueeRect is Rect rect)
-            {
-                _canvasController?.ShowSelectionMarquee(rect);
-            }
-            return;
-        }
-
-        if (!result.Changed)
-        {
-            return;
-        }
-
-        _guidePresenter?.Show(new LayoutMoveResult(result.Changed, result.SnapX, result.SnapY));
-    }
-
-    private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_interactionController is null)
-        {
-            return;
-        }
-
-        var endResult = _interactionController.EndInteraction(Keyboard.Modifiers);
-        if (!endResult.Ended)
-        {
-            return;
-        }
-
-        RootGrid.ReleaseMouseCapture();
-        _canvasController?.HideSelectionMarquee();
-        _guidePresenter?.Hide();
-        RefreshPropertiesPanel();
-        _commandController?.QueueSave();
     }
 
     private void Window_OnKeyDown(object sender, WpfKeyEventArgs e)
@@ -314,7 +259,6 @@ public partial class MainWindow : Window
             SendToBackMenuItem,
             SelectionMarquee);
     }
-
     private void PickShiftBackgroundColor_OnClick(object sender, RoutedEventArgs e) => _propertiesController?.PickShiftBackgroundColor();
     private void PickShiftOffColor_OnClick(object sender, RoutedEventArgs e) => _propertiesController?.PickShiftOffColor();
     private void PickShiftOnColor_OnClick(object sender, RoutedEventArgs e) => _propertiesController?.PickShiftOnColor();

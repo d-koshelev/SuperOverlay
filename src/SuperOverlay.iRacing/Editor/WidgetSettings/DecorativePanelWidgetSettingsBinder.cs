@@ -1,34 +1,27 @@
 using System.Windows;
+using WpfWindow = System.Windows.Window;
 using SuperOverlay.Dashboards.Items.DecorativePanel;
 using SuperOverlay.iRacing.Hosting;
 
 namespace SuperOverlay.iRacing.Editor.WidgetSettings;
 
-internal sealed class DecorativePanelWidgetSettingsBinder : IEditorWidgetSettingsBinder
+internal sealed class DecorativePanelWidgetSettingsBinder : EditorWidgetSettingsBinderBase
 {
-    public void Refresh(OverlayRuntimeSession session, EditorPropertiesPanelView view)
+    protected override bool TryRefreshCore(OverlayRuntimeSession session, EditorPropertiesPanelView view)
     {
         var settings = session.GetSelectedDecorativePanelSettings();
         if (settings is null)
         {
-            view.DecorativePanelSettingsPanel.Visibility = Visibility.Collapsed;
-            view.DecorativeBackgroundColorTextBox.Text = string.Empty;
-            view.DecorativeOpacityTextBox.Text = string.Empty;
-            return;
-        }
-
-        view.DecorativePanelSettingsPanel.Visibility = Visibility.Visible;
-        view.DecorativeBackgroundColorTextBox.Text = settings.BackgroundColor;
-        view.DecorativeOpacityTextBox.Text = EditorNumericText.FormatDouble(settings.Opacity);
-    }
-
-    public bool Apply(OverlayRuntimeSession session, EditorPropertiesPanelView view, Window owner)
-    {
-        if (view.DecorativePanelSettingsPanel.Visibility != Visibility.Visible)
-        {
             return false;
         }
 
+        view.DecorativeBackgroundColorTextBox.Text = settings.BackgroundColor;
+        view.DecorativeOpacityTextBox.Text = EditorNumericText.FormatDouble(settings.Opacity);
+        return true;
+    }
+
+    protected override bool ApplyCore(OverlayRuntimeSession session, EditorPropertiesPanelView view, WpfWindow owner)
+    {
         if (!EditorColorText.IsValidColorValue(view.DecorativeBackgroundColorTextBox.Text))
         {
             EditorValidationMessages.ShowInvalidDecorativePanelColor(owner);
@@ -56,5 +49,21 @@ internal sealed class DecorativePanelWidgetSettingsBinder : IEditorWidgetSetting
         };
 
         return session.UpdateSelectedDecorativePanelSettings(updated);
+    }
+
+    protected override void Reset(EditorPropertiesPanelView view)
+    {
+        view.DecorativeBackgroundColorTextBox.Text = string.Empty;
+        view.DecorativeOpacityTextBox.Text = string.Empty;
+    }
+
+    protected override bool IsSectionVisible(EditorPropertiesPanelView view)
+    {
+        return view.DecorativePanelSettingsPanel.Visibility == Visibility.Visible;
+    }
+
+    protected override void SetSectionVisible(EditorPropertiesPanelView view, bool isVisible)
+    {
+        SetPanelVisibility(view.DecorativePanelSettingsPanel, isVisible);
     }
 }
