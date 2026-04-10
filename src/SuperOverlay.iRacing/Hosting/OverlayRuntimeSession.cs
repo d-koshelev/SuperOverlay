@@ -232,6 +232,46 @@ public sealed class OverlayRuntimeSession
         return true;
     }
 
+    public DecorativePanelDashboardSettings? GetSelectedDecorativePanelSettings()
+    {
+        if (_selectedItemId is null)
+        {
+            return null;
+        }
+
+        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
+        if (item is null || item.TypeId != "dashboard.decorative-panel")
+        {
+            return null;
+        }
+
+        return _registry.Get(item.TypeId).MaterializeSettings(item.Settings) as DecorativePanelDashboardSettings;
+    }
+
+    public bool UpdateSelectedDecorativePanelSettings(DecorativePanelDashboardSettings settings)
+    {
+        if (_selectedItemId is null)
+        {
+            return false;
+        }
+
+        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
+        if (item is null || item.TypeId != "dashboard.decorative-panel")
+        {
+            return false;
+        }
+
+        var changed = _mutationService.UpdateItemSettings(ref _layout, _selectedItemId.Value, settings);
+        if (!changed)
+        {
+            return false;
+        }
+
+        RefreshRuntime();
+        SyncSelectionState();
+        return true;
+    }
+
     public bool UpdateSelectedItemProperties(double x, double y, double width, double height, int zIndex, bool isLocked)
     {
         if (_selectedItemId is null)

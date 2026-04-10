@@ -15,7 +15,8 @@ public sealed class DecorativePanelDashboardPresenter : ILayoutItemPresenter
         _view = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(204, 31, 41, 55)),
-            CornerRadius = new CornerRadius(0)
+            CornerRadius = new CornerRadius(0),
+            Opacity = 1
         };
     }
 
@@ -31,6 +32,7 @@ public sealed class DecorativePanelDashboardPresenter : ILayoutItemPresenter
         _settings = typed with
         {
             BackgroundColor = string.IsNullOrWhiteSpace(typed.BackgroundColor) ? "#CC1F2937" : typed.BackgroundColor.Trim(),
+            Opacity = Math.Clamp(typed.Opacity, 0, 1),
             CornerTopLeft = Math.Clamp(typed.CornerTopLeft, 0, 64),
             CornerTopRight = Math.Clamp(typed.CornerTopRight, 0, 64),
             CornerBottomRight = Math.Clamp(typed.CornerBottomRight, 0, 64),
@@ -38,6 +40,7 @@ public sealed class DecorativePanelDashboardPresenter : ILayoutItemPresenter
         };
 
         _view.Background = new SolidColorBrush(ParseColor(_settings.BackgroundColor, Color.FromArgb(204, 31, 41, 55)));
+        _view.Opacity = _settings.Opacity;
         _view.CornerRadius = new CornerRadius(_settings.CornerTopLeft, _settings.CornerTopRight, _settings.CornerBottomRight, _settings.CornerBottomLeft);
     }
 

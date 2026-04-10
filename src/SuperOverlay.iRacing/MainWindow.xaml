@@ -181,21 +181,25 @@
                     BorderBrush="#FFE5E7EB"
                     BorderThickness="1,0,0,0"
                     Padding="12">
-                <StackPanel>
-                    <TextBlock Text="Properties"
-                               Foreground="#FF1F2937"
-                               FontSize="16"
-                               FontWeight="SemiBold"/>
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBlock Text="Properties"
+                                   Foreground="#FF1F2937"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"/>
 
-                    <TextBlock x:Name="PropertiesHintTextBlock"
-                               Margin="0,8,0,0"
-                               Foreground="#FF6B7280"
-                               Text="Select an item to edit its properties. Multi-select keeps one primary item here."
-                               TextWrapping="Wrap"/>
+                        <TextBlock x:Name="PropertiesHintTextBlock"
+                                   Margin="0,8,0,12"
+                                   Foreground="#FF6B7280"
+                                   Text="Select an item to edit its properties. Multi-select keeps one primary item here."
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
 
-                    <StackPanel x:Name="PropertiesPanel"
-                                Margin="0,12,0,0"
-                                IsEnabled="False">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="True">
+                        <StackPanel x:Name="PropertiesPanel"
+                                    IsEnabled="False">
                         <TextBlock Text="Widget"
                                    Foreground="#FF6B7280"/>
                         <TextBlock x:Name="SelectedWidgetNameTextBlock"
@@ -355,12 +359,45 @@
                                        Text="Use WPF color values like #20262E or #E6111827. Per-LED colors can be comma, semicolon or line separated. Turn off per-LED colors to use one shared on-color for all lamps."/>
                         </StackPanel>
 
+                        <StackPanel x:Name="DecorativePanelSettingsPanel"
+                                    Margin="0,12,0,0"
+                                    Visibility="Collapsed">
+                            <Separator Margin="0,0,0,12"/>
+                            <TextBlock Text="Decorative Panel"
+                                       Foreground="#FF1F2937"
+                                       FontWeight="SemiBold"/>
+
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock Text="Background color" Foreground="#FF6B7280"/>
+                                <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                    <Button Content="Pick"
+                                            Width="44"
+                                            Margin="8,0,0,0"
+                                            DockPanel.Dock="Right"
+                                            Click="PickDecorativeBackgroundColor_OnClick"/>
+                                    <TextBox x:Name="DecorativeBackgroundColorTextBox"/>
+                                </DockPanel>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock Text="Opacity" Foreground="#FF6B7280"/>
+                                <TextBox x:Name="DecorativeOpacityTextBox"
+                                         Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="#FF6B7280"
+                                       FontSize="11"
+                                       Text="Decorative panel uses a WPF color value like #20262E or #CC1F2937. Opacity uses a value from 0 to 1."/>
+                        </StackPanel>
+
                         <Button Content="Apply"
                                 Margin="0,12,0,0"
                                 Padding="10,6"
                                 Click="ApplyProperties_OnClick"/>
-                    </StackPanel>
-                </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
             </Border>
         </Grid>
     </DockPanel>

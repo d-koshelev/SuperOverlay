@@ -1,190 +1,119 @@
-using System.Windows;
+using WpfWindow = System.Windows.Window;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfMouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
+using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
-using SuperOverlay.LayoutBuilder.Runtime;
-using SuperOverlay.iRacing.Hosting;
 using SuperOverlay.iRacing.Mapping;
+using SuperOverlay.iRacing.Runtime;
 using SuperOverlay.iRacing.Telemetry.Mock;
 
 namespace SuperOverlay.iRacing;
 
-public partial class RuntimeWindow : Window
+public partial class RuntimeWindow : WpfWindow
 {
     private readonly MockTelemetryProvider _telemetry = new();
     private readonly IRacingMapper _mapper = new();
-    private readonly OverlayRuntimeBootstrapper _bootstrapper = new();
+    private readonly Hosting.OverlayRuntimeBootstrapper _bootstrapper = new();
 
-    private OverlayRuntimeSession? _session;
-    private LayoutEditorInteractionController? _interactionController;
-    private DispatcherTimer? _timer;
-    private bool _isMoveEditEnabled;
+    private readonly RuntimeWindowController _runtimeController;
+    private readonly RuntimeCanvasController _canvasController;
 
     public RuntimeWindow()
     {
         InitializeComponent();
 
-        ConfigureWindowBounds();
-        Loaded += (_, _) => ConfigureWindowBounds();
+        _runtimeController = new RuntimeWindowController(this, RootGrid, RuntimeHintBorder, EditOverlayBar, _telemetry, _mapper, _bootstrapper);
+        _canvasController = new RuntimeCanvasController(() => _runtimeController.Session, RootGrid);
 
-        BuildSession(OverlayShellMode.Runtime);
-
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _timer.Tick += OnTick;
-        _timer.Start();
-    }
-
-    private void ConfigureWindowBounds()
-    {
-        Left = SystemParameters.VirtualScreenLeft;
-        Top = SystemParameters.VirtualScreenTop;
-        Width = SystemParameters.VirtualScreenWidth;
-        Height = SystemParameters.VirtualScreenHeight;
-    }
-
-    private void BuildSession(OverlayShellMode shellMode)
-    {
-        RootGrid.Children.Clear();
-        _session = _bootstrapper.Build(RootGrid, shellMode);
-        _session.SetSnappingEnabled(false);
-        _interactionController = shellMode == OverlayShellMode.RuntimeMoveEdit
-            ? new LayoutEditorInteractionController(_session, LayoutInteractionOptions.RuntimeMoveOnly)
-            : null;
-
-        RuntimeHintBorder.Visibility = shellMode == OverlayShellMode.Runtime ? Visibility.Visible : Visibility.Collapsed;
-        EditOverlayBar.Visibility = shellMode == OverlayShellMode.RuntimeMoveEdit ? Visibility.Visible : Visibility.Collapsed;
-        _isMoveEditEnabled = shellMode == OverlayShellMode.RuntimeMoveEdit;
-    }
-
-    private void ToggleMoveEdit()
-    {
-        Focus();
-
-        if (_isMoveEditEnabled)
-        {
-            CancelMoveEdit();
-            return;
-        }
-
-        BuildSession(OverlayShellMode.RuntimeMoveEdit);
-    }
-
-    private void ApplyMoveEdit()
-    {
-        if (_session is null || !_isMoveEditEnabled)
-        {
-            return;
-        }
-
-        _session.SaveLayout();
-        BuildSession(OverlayShellMode.Runtime);
-    }
-
-    private void CancelMoveEdit()
-    {
-        if (_session is null || !_isMoveEditEnabled)
-        {
-            return;
-        }
-
-        _session.ReloadLayout();
-        BuildSession(OverlayShellMode.Runtime);
-    }
-
-    private void OnTick(object? sender, EventArgs e)
-    {
-        if (_session is null)
-        {
-            return;
-        }
-
-        var (speed, rpm, gear, shiftLightPercent) = _telemetry.Get();
-        _session.Update(_mapper.Map(speed, rpm, gear, shiftLightPercent));
+        _runtimeController.Initialize();
+        _canvasController.UpdateShellMode(_runtimeController.IsMoveEditEnabled);
+        Loaded += (_, _) => _runtimeController.ConfigureWindowBounds();
     }
 
     private void Window_OnKeyDown(object sender, WpfKeyEventArgs e)
     {
         if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.E)
         {
-            ToggleMoveEdit();
+            _runtimeController.ToggleMoveEdit();
+            _canvasController.UpdateShellMode(_runtimeController.IsMoveEditEnabled);
             e.Handled = true;
             return;
         }
 
-        if (!_isMoveEditEnabled)
+        if (!_runtimeController.IsMoveEditEnabled)
         {
             return;
         }
 
         if (e.Key == Key.Enter)
         {
-            ApplyMoveEdit();
+            _runtimeController.ApplyMoveEdit();
+            _canvasController.UpdateShellMode(_runtimeController.IsMoveEditEnabled);
             e.Handled = true;
             return;
         }
 
         if (e.Key == Key.Escape)
         {
-            CancelMoveEdit();
+            _runtimeController.CancelMoveEdit();
+            _canvasController.UpdateShellMode(_runtimeController.IsMoveEditEnabled);
             e.Handled = true;
         }
     }
 
-    private void RootGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void RootGrid_OnMouseLeftButtonDown(object sender, WpfMouseButtonEventArgs e)
     {
-        if (!_isMoveEditEnabled || _session is null || _interactionController is null)
+        if (!_runtimeController.IsMoveEditEnabled)
         {
             return;
         }
 
         Focus();
-        var startResult = _interactionController.BeginInteraction(e.OriginalSource as DependencyObject, e.GetPosition(RootGrid), Keyboard.Modifiers);
-        if (startResult.CaptureMouse)
+        if (_canvasController.HandleMouseLeftButtonDown(e.OriginalSource as DependencyObject))
         {
-            RootGrid.CaptureMouse();
             e.Handled = true;
         }
     }
 
     private void RootGrid_OnMouseMove(object sender, WpfMouseEventArgs e)
     {
-        if (!_isMoveEditEnabled || _interactionController is null)
+        if (!_runtimeController.IsMoveEditEnabled)
         {
             return;
         }
 
-        if (!_interactionController.IsInteracting || e.LeftButton != MouseButtonState.Pressed)
-        {
-            return;
-        }
-
-        _interactionController.MoveInteraction(e.GetPosition(RootGrid), RootGrid.ActualWidth, RootGrid.ActualHeight, true);
+        _canvasController.HandleMouseMove(e);
     }
 
-    private void RootGrid_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void RootGrid_OnMouseLeftButtonUp(object sender, WpfMouseButtonEventArgs e)
     {
-        if (!_isMoveEditEnabled || _interactionController is null)
+        if (!_runtimeController.IsMoveEditEnabled)
         {
             return;
         }
 
-        var endResult = _interactionController.EndInteraction(Keyboard.Modifiers);
-        if (!endResult.Ended)
+        if (_canvasController.HandleMouseLeftButtonUp())
         {
-            return;
+            e.Handled = true;
         }
-
-        RootGrid.ReleaseMouseCapture();
-        e.Handled = true;
     }
 
-    private void ApplyEditButton_OnClick(object sender, RoutedEventArgs e) => ApplyMoveEdit();
-    private void CancelEditButton_OnClick(object sender, RoutedEventArgs e) => CancelMoveEdit();
+    private void ApplyEditButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _runtimeController.ApplyMoveEdit();
+        _canvasController.UpdateShellMode(_runtimeController.IsMoveEditEnabled);
+    }
+
+    private void CancelEditButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _runtimeController.CancelMoveEdit();
+        _canvasController.UpdateShellMode(_runtimeController.IsMoveEditEnabled);
+    }
 
     protected override void OnClosed(EventArgs e)
     {
-        _timer?.Stop();
+        _runtimeController.Stop();
         base.OnClosed(e);
     }
 }
