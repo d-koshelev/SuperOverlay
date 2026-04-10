@@ -6,4 +6,9 @@ public sealed record LayoutItemPlacement(
     double Y,
     double Width,
     double Height,
-    int ZIndex);
+    int ZIndex,
+    double RuntimeDeltaX = 0,
+    double RuntimeDeltaY = 0,
+    double? RuntimeX = null,
+    double? RuntimeY = null,
+    bool HasRuntimeOverride = false);

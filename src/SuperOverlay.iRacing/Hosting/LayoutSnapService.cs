@@ -33,11 +33,32 @@ public sealed class LayoutSnapService
             return (targetX, targetY, null, null);
         }
 
-        var width = placement.Width;
-        var height = placement.Height;
+        return SnapGroupPosition(
+            layout,
+            new[] { movingItemId },
+            targetX,
+            targetY,
+            placement.Width,
+            placement.Height,
+            canvasWidth,
+            canvasHeight);
+    }
 
-        var candidateX = FindSnapX(layout, movingItemId, targetX, width, canvasWidth);
-        var candidateY = FindSnapY(layout, movingItemId, targetY, height, canvasHeight);
+    public (double X, double Y, double? SnapX, double? SnapY) SnapGroupPosition(
+        LayoutDocument layout,
+        IReadOnlyCollection<Guid> movingItemIds,
+        double targetX,
+        double targetY,
+        double width,
+        double height,
+        double canvasWidth,
+        double canvasHeight)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        ArgumentNullException.ThrowIfNull(movingItemIds);
+
+        var candidateX = FindSnapX(layout, movingItemIds, targetX, width, canvasWidth);
+        var candidateY = FindSnapY(layout, movingItemIds, targetY, height, canvasHeight);
 
         var finalX = ApplyAxisHysteresis(targetX, candidateX, ref _positionSnapActiveX, ref _positionSnapValueX);
         var finalY = ApplyAxisHysteresis(targetY, candidateY, ref _positionSnapActiveY, ref _positionSnapValueY);
@@ -141,7 +162,7 @@ public sealed class LayoutSnapService
         return target;
     }
 
-    private static double? FindSnapX(LayoutDocument layout, Guid movingItemId, double targetX, double width, double canvasWidth)
+    private static double? FindSnapX(LayoutDocument layout, IReadOnlyCollection<Guid> movingItemIds, double targetX, double width, double canvasWidth)
     {
         var candidates = new List<double>
         {
@@ -150,7 +171,7 @@ public sealed class LayoutSnapService
             canvasWidth / 2 - width / 2
         };
 
-        foreach (var other in layout.Placements.Where(x => x.ItemId != movingItemId))
+        foreach (var other in layout.Placements.Where(x => !movingItemIds.Contains(x.ItemId)))
         {
             var otherLeft = other.X;
             var otherRight = other.X + other.Width;
@@ -166,7 +187,7 @@ public sealed class LayoutSnapService
         return FindClosest(targetX, candidates);
     }
 
-    private static double? FindSnapY(LayoutDocument layout, Guid movingItemId, double targetY, double height, double canvasHeight)
+    private static double? FindSnapY(LayoutDocument layout, IReadOnlyCollection<Guid> movingItemIds, double targetY, double height, double canvasHeight)
     {
         var candidates = new List<double>
         {
@@ -175,7 +196,7 @@ public sealed class LayoutSnapService
             canvasHeight / 2 - height / 2
         };
 
-        foreach (var other in layout.Placements.Where(x => x.ItemId != movingItemId))
+        foreach (var other in layout.Placements.Where(x => !movingItemIds.Contains(x.ItemId)))
         {
             var otherTop = other.Y;
             var otherBottom = other.Y + other.Height;

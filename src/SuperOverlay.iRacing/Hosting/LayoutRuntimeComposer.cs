@@ -7,11 +7,13 @@ namespace SuperOverlay.iRacing.Hosting;
 public sealed class LayoutRuntimeComposer
 {
     private readonly DashboardRegistry _registry;
+    private readonly OverlayShellMode _shellMode;
 
-    public LayoutRuntimeComposer(DashboardRegistry registry)
+    public LayoutRuntimeComposer(DashboardRegistry registry, OverlayShellMode shellMode = OverlayShellMode.Editor)
     {
         ArgumentNullException.ThrowIfNull(registry);
         _registry = registry;
+        _shellMode = shellMode;
     }
 
     public IReadOnlyList<RuntimeLayoutItem> Compose(LayoutDocument layout)
@@ -23,7 +25,7 @@ public sealed class LayoutRuntimeComposer
 
         foreach (var item in layout.Items)
         {
-            var placement = placementIndex.GetRequired(item.Id);
+            var placement = LayoutPlacementResolver.ResolveForShell(placementIndex.GetRequired(item.Id), layout.Canvas, _shellMode);
             var definition = _registry.Get(item.TypeId);
             var presenter = definition.CreatePresenter();
             var settings = definition.MaterializeSettings(item.Settings);
@@ -31,7 +33,8 @@ public sealed class LayoutRuntimeComposer
             var runtimeItem = new RuntimeLayoutItem(
                 item with { Settings = settings },
                 placement,
-                presenter);
+                presenter,
+                _shellMode);
 
             result.Add(runtimeItem);
         }

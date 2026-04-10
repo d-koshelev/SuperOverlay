@@ -26,7 +26,7 @@ public sealed class SpeedDashboardPresenter : ILayoutItemPresenter
         _view = new Border
         {
             Background = new SolidColorBrush(Color.FromRgb(31, 41, 55)),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = new CornerRadius(0),
             Padding = new Thickness(14, 8, 14, 8),
             Child = _text
         };
@@ -38,7 +38,14 @@ public sealed class SpeedDashboardPresenter : ILayoutItemPresenter
     {
         if (settings is SpeedDashboardSettings typed)
         {
-            _settings = typed;
+            _settings = typed with
+            {
+                CornerTopLeft = Math.Clamp(typed.CornerTopLeft, 0, 64),
+                CornerTopRight = Math.Clamp(typed.CornerTopRight, 0, 64),
+                CornerBottomRight = Math.Clamp(typed.CornerBottomRight, 0, 64),
+                CornerBottomLeft = Math.Clamp(typed.CornerBottomLeft, 0, 64)
+            };
+            _view.CornerRadius = new CornerRadius(_settings.CornerTopLeft, _settings.CornerTopRight, _settings.CornerBottomRight, _settings.CornerBottomLeft);
         }
     }
 

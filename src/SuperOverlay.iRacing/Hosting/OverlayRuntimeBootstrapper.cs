@@ -8,7 +8,7 @@ namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class OverlayRuntimeBootstrapper
 {
-    public OverlayRuntimeSession Build(Grid root)
+    public OverlayRuntimeSession Build(Grid root, OverlayShellMode shellMode = OverlayShellMode.Editor)
     {
         ArgumentNullException.ThrowIfNull(root);
 
@@ -22,11 +22,11 @@ public sealed class OverlayRuntimeBootstrapper
         var layoutProvider = new LayoutDocumentProvider();
         var layout = layoutProvider.GetOrCreateDefault(layoutPath);
 
-        var composer = new LayoutRuntimeComposer(registry);
+        var composer = new LayoutRuntimeComposer(registry, shellMode);
         var fileStore = new LayoutFileStore();
         var mutationService = new LayoutMutationService(registry);
 
-        var layoutHost = new LayoutHost(root);
+        var layoutHost = new LayoutHost(root, shellMode);
 
         return new OverlayRuntimeSession(
             layoutHost,
@@ -35,6 +35,7 @@ public sealed class OverlayRuntimeBootstrapper
             fileStore,
             mutationService,
             layoutPath,
-            layout);
+            layout,
+            shellMode);
     }
 }

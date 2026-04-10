@@ -2,6 +2,14 @@ namespace SuperOverlay.LayoutBuilder.Layout;
 
 public sealed class LayoutDocumentEditor
 {
+    public LayoutDocument UpdateCanvas(LayoutDocument document, LayoutCanvas canvas)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(canvas);
+
+        return document with { Canvas = canvas };
+    }
+
     public LayoutDocument AddItem(
         LayoutDocument document,
         LayoutItemInstance item,
@@ -37,6 +45,17 @@ public sealed class LayoutDocumentEditor
         };
     }
 
+    public LayoutDocument UpdateItem(LayoutDocument document, LayoutItemInstance item)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(item);
+
+        return document with
+        {
+            Items = document.Items.Select(x => x.Id == item.Id ? item : x).ToList()
+        };
+    }
+
     public LayoutDocument UpdatePlacement(LayoutDocument document, LayoutItemPlacement placement)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -47,5 +66,50 @@ public sealed class LayoutDocumentEditor
             .ToList();
 
         return document with { Placements = placements };
+    }
+
+    public LayoutDocument AddLink(LayoutDocument document, LayoutItemLink link)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(link);
+
+        var exists = document.Links.Any(x =>
+            (x.SourceItemId == link.SourceItemId && x.TargetItemId == link.TargetItemId) ||
+            (x.SourceItemId == link.TargetItemId && x.TargetItemId == link.SourceItemId));
+
+        if (exists)
+        {
+            return document;
+        }
+
+        return document with
+        {
+            Links = document.Links.Concat(new[] { link }).ToList()
+        };
+    }
+
+    public LayoutDocument RemoveLinksForItem(LayoutDocument document, Guid itemId)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        return document with
+        {
+            Links = document.Links
+                .Where(x => x.SourceItemId != itemId && x.TargetItemId != itemId)
+                .ToList()
+        };
+    }
+
+    public LayoutDocument RemoveLink(LayoutDocument document, Guid firstItemId, Guid secondItemId)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        return document with
+        {
+            Links = document.Links
+                .Where(x => !((x.SourceItemId == firstItemId && x.TargetItemId == secondItemId) ||
+                              (x.SourceItemId == secondItemId && x.TargetItemId == firstItemId)))
+                .ToList()
+        };
     }
 }

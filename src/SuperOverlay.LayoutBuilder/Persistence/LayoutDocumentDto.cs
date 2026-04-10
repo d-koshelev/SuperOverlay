@@ -43,15 +43,19 @@ public sealed class LayoutCanvasDto
 {
     public double Width { get; set; }
     public double Height { get; set; }
+    public double RuntimeOffsetX { get; set; }
+    public double RuntimeOffsetY { get; set; }
 
-    public LayoutCanvas ToCanvas() => new(Width, Height);
+    public LayoutCanvas ToCanvas() => new(Width, Height, RuntimeOffsetX, RuntimeOffsetY);
 
     public static LayoutCanvasDto FromCanvas(LayoutCanvas canvas)
     {
         return new LayoutCanvasDto
         {
             Width = canvas.Width,
-            Height = canvas.Height
+            Height = canvas.Height,
+            RuntimeOffsetX = canvas.RuntimeOffsetX,
+            RuntimeOffsetY = canvas.RuntimeOffsetY
         };
     }
 }
@@ -61,10 +65,11 @@ public sealed class LayoutItemInstanceDto
     public Guid Id { get; set; }
     public string TypeId { get; set; } = string.Empty;
     public string SettingsJson { get; set; } = "{}";
+    public bool IsLocked { get; set; }
 
     public LayoutItemInstance ToInstance()
     {
-        return new LayoutItemInstance(Id, TypeId, SettingsJson);
+        return new LayoutItemInstance(Id, TypeId, SettingsJson, IsLocked);
     }
 
     public static LayoutItemInstanceDto FromInstance(LayoutItemInstance instance)
@@ -92,7 +97,8 @@ public sealed class LayoutItemInstanceDto
         {
             Id = instance.Id,
             TypeId = instance.TypeId,
-            SettingsJson = settingsJson
+            SettingsJson = settingsJson,
+            IsLocked = instance.IsLocked
         };
     }
 }
@@ -105,10 +111,15 @@ public sealed class LayoutItemPlacementDto
     public double Width { get; set; }
     public double Height { get; set; }
     public int ZIndex { get; set; }
+    public double RuntimeDeltaX { get; set; }
+    public double RuntimeDeltaY { get; set; }
+    public double? RuntimeX { get; set; }
+    public double? RuntimeY { get; set; }
+    public bool HasRuntimeOverride { get; set; }
 
     public LayoutItemPlacement ToPlacement()
     {
-        return new LayoutItemPlacement(ItemId, X, Y, Width, Height, ZIndex);
+        return new LayoutItemPlacement(ItemId, X, Y, Width, Height, ZIndex, RuntimeDeltaX, RuntimeDeltaY, RuntimeX, RuntimeY, HasRuntimeOverride);
     }
 
     public static LayoutItemPlacementDto FromPlacement(LayoutItemPlacement placement)
@@ -120,7 +131,12 @@ public sealed class LayoutItemPlacementDto
             Y = placement.Y,
             Width = placement.Width,
             Height = placement.Height,
-            ZIndex = placement.ZIndex
+            ZIndex = placement.ZIndex,
+            RuntimeDeltaX = placement.RuntimeDeltaX,
+            RuntimeDeltaY = placement.RuntimeDeltaY,
+            RuntimeX = placement.RuntimeX,
+            RuntimeY = placement.RuntimeY,
+            HasRuntimeOverride = placement.HasRuntimeOverride
         };
     }
 }
