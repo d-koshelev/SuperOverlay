@@ -6,35 +6,35 @@ using SuperOverlay.Dashboards.Items.Speed;
 using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.LayoutBuilder.Layout;
 using SuperOverlay.LayoutBuilder.Persistence;
-using SuperOverlay.LayoutBuilder.Panels;
 using SuperOverlay.LayoutBuilder.PanelLayouts;
 using SuperOverlay.LayoutBuilder.Runtime;
-
+using SuperOverlay.LayoutBuilder.Panels;
 namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class OverlayRuntimeSession
 {
     private readonly LayoutHost _layoutHost;
     private readonly DashboardRegistry _registry;
-    private readonly LayoutRuntimeComposer _composer;
     private readonly LayoutFileStore _fileStore;
     private readonly LayoutMutationService _mutationService;
     private readonly LayoutSnapService _snapService = new();
     private readonly string _layoutPath;
     private readonly OverlayShellMode _shellMode;
-    private readonly PanelLayoutCompiler _panelLayoutCompiler = new();
-    private readonly PanelPresetLibrary _panelPresetLibrary = new();
+    private readonly WidgetSettingsSessionService _widgetSettingsService;
+    private readonly PanelLayoutSessionService _panelLayoutService;
+    private readonly OverlaySelectionState _selection = new();
+    private readonly OverlaySelectionService _selectionService = new();
+    private readonly OverlayEditCommandsService _editCommandsService;
+    private readonly OverlaySelectionPresentationService _selectionPresentationService;
+    private readonly OverlayRuntimeSyncService _runtimeSyncService;
+    private readonly OverlayMovementService _movementService;
+    private readonly LayoutClipboardState _clipboard = new();
 
     private LayoutDocument _layout;
     private PanelLayoutDocument? _panelLayout;
     private string? _panelLayoutPath;
     private IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> _compiledPanelItemMap = new Dictionary<Guid, IReadOnlyList<Guid>>();
-    private Guid? _selectedItemId;
-    private HashSet<Guid> _selectedItemIds = new();
     private bool _snappingEnabled = true;
-    private LayoutDocument? _clipboardLayout;
-    private IReadOnlyList<Guid> _clipboardItemIds = Array.Empty<Guid>();
-    private int _pasteSequence;
 
     public OverlayRuntimeSession(
         LayoutHost layoutHost,
@@ -48,24 +48,29 @@ public sealed class OverlayRuntimeSession
     {
         _layoutHost = layoutHost ?? throw new ArgumentNullException(nameof(layoutHost));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-        _composer = composer ?? throw new ArgumentNullException(nameof(composer));
         _fileStore = fileStore ?? throw new ArgumentNullException(nameof(fileStore));
         _mutationService = mutationService ?? throw new ArgumentNullException(nameof(mutationService));
         _layoutPath = string.IsNullOrWhiteSpace(layoutPath) ? throw new ArgumentException("Layout path is required.", nameof(layoutPath)) : layoutPath;
         _layout = layout ?? throw new ArgumentNullException(nameof(layout));
         _shellMode = shellMode;
+        _widgetSettingsService = new WidgetSettingsSessionService(_registry, _mutationService);
+        _panelLayoutService = new PanelLayoutSessionService(_layoutPath);
+        _editCommandsService = new OverlayEditCommandsService(_mutationService);
+        _selectionPresentationService = new OverlaySelectionPresentationService(_registry, _editCommandsService);
+        _runtimeSyncService = new OverlayRuntimeSyncService(_layoutHost, composer, _selectionService, _shellMode);
+        _movementService = new OverlayMovementService(_mutationService, _snapService, _selectionService);
 
         RefreshRuntime();
     }
 
     public void Update(object runtimeState) => _layoutHost.Update(runtimeState);
     public void SetSnappingEnabled(bool enabled) => _snappingEnabled = enabled;
-    public Guid? GetSelectedItemId() => _selectedItemId;
-    public IReadOnlyList<Guid> GetSelectedItemIds() => _selectedItemIds.ToList();
-    public bool HasSelection => _selectedItemIds.Count > 0;
-    public bool CanPaste => _clipboardLayout is not null && _clipboardItemIds.Count > 0;
-    public bool HasLockedSelection => _selectedItemIds.Any(id => _layout.Items.Any(x => x.Id == id && x.IsLocked));
-    public bool HasPanelLayout => _panelLayout is not null;
+    public Guid? GetSelectedItemId() => _selection.PrimaryItemId;
+    public IReadOnlyList<Guid> GetSelectedItemIds() => _selection.ItemIds.ToList();
+    public bool HasSelection => _selection.HasSelection;
+    public bool CanPaste => _clipboard.HasContent;
+    public bool HasLockedSelection => _selection.ItemIds.Any(id => _layout.Items.Any(x => x.Id == id && x.IsLocked));
+    public bool HasPanelLayout => _panelLayoutService.HasPanelLayout(_panelLayout);
     public string? GetPanelLayoutPath() => _panelLayoutPath;
 
     public LayoutCanvas GetCanvas() => _layout.Canvas;
@@ -114,65 +119,8 @@ public sealed class OverlayRuntimeSession
 
     public LayoutSelectedItemProperties? GetSelectedItemProperties()
     {
-        if (_panelLayout is not null)
-        {
-            var selectedPanels = GetSelectedPanels();
-            if (selectedPanels.Count == 0)
-            {
-                return null;
-            }
-
-            var primaryPanel = ResolveSelectedPanel(_selectedItemId) ?? selectedPanels[0];
-            var compiledItemIds = _compiledPanelItemMap.TryGetValue(primaryPanel.Id, out var itemIds) ? itemIds : Array.Empty<Guid>();
-            var placements = _layout.Placements.Where(x => compiledItemIds.Contains(x.ItemId)).ToList();
-            if (placements.Count == 0)
-            {
-                return null;
-            }
-
-            var bounds = GetBounds(placements);
-            return new LayoutSelectedItemProperties(
-                primaryPanel.Id,
-                "panel.instance",
-                primaryPanel.PanelName,
-                primaryPanel.X,
-                primaryPanel.Y,
-                bounds.Width,
-                bounds.Height,
-                primaryPanel.ZIndex,
-                primaryPanel.IsLocked,
-                selectedPanels.Count,
-                true);
-        }
-
-        if (_selectedItemId is null)
-        {
-            return null;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
-        if (item is null || placement is null)
-        {
-            return null;
-        }
-
-        var definition = _registry.Get(item.TypeId);
-        var isGrouped = _layout.Links.Any(x => x.SourceItemId == item.Id || x.TargetItemId == item.Id);
-        return new LayoutSelectedItemProperties(
-            item.Id,
-            item.TypeId,
-            definition.DisplayName,
-            placement.X,
-            placement.Y,
-            placement.Width,
-            placement.Height,
-            placement.ZIndex,
-            item.IsLocked,
-            _selectedItemIds.Count,
-            isGrouped);
+        return _selectionPresentationService.GetSelectedItemProperties(_layout, _selection, _panelLayout, _compiledPanelItemMap);
     }
-
 
     public WidgetCornerSettings? GetSelectedWidgetCornerSettings()
     {
@@ -181,33 +129,7 @@ public sealed class OverlayRuntimeSession
             return null;
         }
 
-        if (_selectedItemId is null)
-        {
-            return null;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        if (item is null)
-        {
-            return null;
-        }
-
-        return item.TypeId switch
-        {
-            "dashboard.shift-leds" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is ShiftLedDashboardSettings shift
-                ? new WidgetCornerSettings(shift.CornerTopLeft, shift.CornerTopRight, shift.CornerBottomRight, shift.CornerBottomLeft)
-                : null,
-            "dashboard.gear" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is GearDashboardSettings gear
-                ? new WidgetCornerSettings(gear.CornerTopLeft, gear.CornerTopRight, gear.CornerBottomRight, gear.CornerBottomLeft)
-                : null,
-            "dashboard.speed" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is SpeedDashboardSettings speed
-                ? new WidgetCornerSettings(speed.CornerTopLeft, speed.CornerTopRight, speed.CornerBottomRight, speed.CornerBottomLeft)
-                : null,
-            "dashboard.decorative-panel" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is DecorativePanelDashboardSettings panel
-                ? new WidgetCornerSettings(panel.CornerTopLeft, panel.CornerTopRight, panel.CornerBottomRight, panel.CornerBottomLeft)
-                : null,
-            _ => null
-        };
+        return _widgetSettingsService.GetSelectedCornerSettings(_layout, _selection.PrimaryItemId);
     }
 
     public bool UpdateSelectedWidgetCornerSettings(double topLeft, double topRight, double bottomRight, double bottomLeft)
@@ -217,64 +139,7 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        if (_selectedItemId is null)
-        {
-            return false;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        if (item is null)
-        {
-            return false;
-        }
-
-        object? updatedSettings = item.TypeId switch
-        {
-            "dashboard.shift-leds" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is ShiftLedDashboardSettings shift
-                ? shift with
-                {
-                    CornerTopLeft = topLeft,
-                    CornerTopRight = topRight,
-                    CornerBottomRight = bottomRight,
-                    CornerBottomLeft = bottomLeft
-                }
-                : null,
-            "dashboard.gear" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is GearDashboardSettings gear
-                ? gear with
-                {
-                    CornerTopLeft = topLeft,
-                    CornerTopRight = topRight,
-                    CornerBottomRight = bottomRight,
-                    CornerBottomLeft = bottomLeft
-                }
-                : null,
-            "dashboard.speed" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is SpeedDashboardSettings speed
-                ? speed with
-                {
-                    CornerTopLeft = topLeft,
-                    CornerTopRight = topRight,
-                    CornerBottomRight = bottomRight,
-                    CornerBottomLeft = bottomLeft
-                }
-                : null,
-            "dashboard.decorative-panel" => _registry.Get(item.TypeId).MaterializeSettings(item.Settings) is DecorativePanelDashboardSettings panel
-                ? panel with
-                {
-                    CornerTopLeft = topLeft,
-                    CornerTopRight = topRight,
-                    CornerBottomRight = bottomRight,
-                    CornerBottomLeft = bottomLeft
-                }
-                : null,
-            _ => null
-        };
-
-        if (updatedSettings is null)
-        {
-            return false;
-        }
-
-        var changed = _mutationService.UpdateItemSettings(ref _layout, _selectedItemId.Value, updatedSettings);
+        var changed = _widgetSettingsService.UpdateSelectedCornerSettings(ref _layout, _selection.PrimaryItemId, topLeft, topRight, bottomRight, bottomLeft);
         if (!changed)
         {
             return false;
@@ -292,18 +157,7 @@ public sealed class OverlayRuntimeSession
             return null;
         }
 
-        if (_selectedItemId is null)
-        {
-            return null;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        if (item is null || item.TypeId != "dashboard.shift-leds")
-        {
-            return null;
-        }
-
-        return _registry.Get(item.TypeId).MaterializeSettings(item.Settings) as ShiftLedDashboardSettings;
+        return _widgetSettingsService.GetSelectedSettings<ShiftLedDashboardSettings>(_layout, _selection.PrimaryItemId, "dashboard.shift-leds");
     }
 
     public bool UpdateSelectedShiftLedSettings(ShiftLedDashboardSettings settings)
@@ -313,18 +167,7 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        if (_selectedItemId is null)
-        {
-            return false;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        if (item is null || item.TypeId != "dashboard.shift-leds")
-        {
-            return false;
-        }
-
-        var changed = _mutationService.UpdateItemSettings(ref _layout, _selectedItemId.Value, settings);
+        var changed = _widgetSettingsService.UpdateSelectedSettings(ref _layout, _selection.PrimaryItemId, "dashboard.shift-leds", settings);
         if (!changed)
         {
             return false;
@@ -342,18 +185,7 @@ public sealed class OverlayRuntimeSession
             return null;
         }
 
-        if (_selectedItemId is null)
-        {
-            return null;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        if (item is null || item.TypeId != "dashboard.decorative-panel")
-        {
-            return null;
-        }
-
-        return _registry.Get(item.TypeId).MaterializeSettings(item.Settings) as DecorativePanelDashboardSettings;
+        return _widgetSettingsService.GetSelectedSettings<DecorativePanelDashboardSettings>(_layout, _selection.PrimaryItemId, "dashboard.decorative-panel");
     }
 
     public bool UpdateSelectedDecorativePanelSettings(DecorativePanelDashboardSettings settings)
@@ -363,18 +195,7 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        if (_selectedItemId is null)
-        {
-            return false;
-        }
-
-        var item = _layout.Items.FirstOrDefault(x => x.Id == _selectedItemId.Value);
-        if (item is null || item.TypeId != "dashboard.decorative-panel")
-        {
-            return false;
-        }
-
-        var changed = _mutationService.UpdateItemSettings(ref _layout, _selectedItemId.Value, settings);
+        var changed = _widgetSettingsService.UpdateSelectedSettings(ref _layout, _selection.PrimaryItemId, "dashboard.decorative-panel", settings);
         if (!changed)
         {
             return false;
@@ -387,45 +208,25 @@ public sealed class OverlayRuntimeSession
 
     public bool UpdateSelectedItemProperties(double x, double y, double width, double height, int zIndex, bool isLocked)
     {
-        if (_panelLayout is not null)
-        {
-            var selectedPanelIds = GetSelectedPanelIds();
-            if (selectedPanelIds.Count == 0)
-            {
-                return false;
-            }
-
-            var primaryPanel = ResolveSelectedPanel(_selectedItemId);
-            var updatedPanels = _panelLayout.Panels
-                .Select(panel =>
-                {
-                    if (!selectedPanelIds.Contains(panel.Id))
-                    {
-                        return panel;
-                    }
-
-                    if (primaryPanel is not null && panel.Id == primaryPanel.Id)
-                    {
-                        return panel with { X = x, Y = y, ZIndex = zIndex, IsLocked = isLocked };
-                    }
-
-                    return panel with { IsLocked = isLocked };
-                })
-                .ToList();
-
-            _panelLayout = _panelLayout with { Panels = updatedPanels };
-            return RecompilePanelLayout(selectLastPanel: false, preserveSelection: true);
-        }
-
-        if (_selectedItemId is null)
-        {
-            return false;
-        }
-
-        var changed = _mutationService.UpdateItemProperties(ref _layout, _selectedItemId.Value, x, y, width, height, zIndex, isLocked);
+        var changed = _movementService.UpdateSelectedItemProperties(
+            ref _layout,
+            ref _panelLayout,
+            _selection,
+            _compiledPanelItemMap,
+            x,
+            y,
+            width,
+            height,
+            zIndex,
+            isLocked);
         if (!changed)
         {
             return false;
+        }
+
+        if (_panelLayout is not null)
+        {
+            return RecompilePanelLayout(selectLastPanel: false, preserveSelection: true);
         }
 
         RefreshRuntime();
@@ -435,41 +236,32 @@ public sealed class OverlayRuntimeSession
 
     public IReadOnlyList<LayoutEditorItem> GetLayoutItems()
     {
-        return _layout.Items
-            .Select(item =>
-            {
-                var definition = _registry.Get(item.TypeId);
-                var isGrouped = _layout.Links.Any(x => x.SourceItemId == item.Id || x.TargetItemId == item.Id);
-                return new LayoutEditorItem(item.Id, item.TypeId, definition.DisplayName, isGrouped, item.IsLocked);
-            })
-            .ToList();
+        return _selectionPresentationService.GetLayoutItems(_layout);
     }
 
     public void SelectItem(Guid? itemId)
     {
         if (itemId is null)
         {
-            _selectedItemId = null;
-            _selectedItemIds = new HashSet<Guid>();
+            _selection.Clear();
             SyncSelectionState();
             return;
         }
 
-        SelectItems(GetSelectionUnitItemIds(itemId.Value), itemId.Value);
+        SelectItems(_selectionService.GetSelectionUnitItemIds(_layout, itemId.Value, _panelLayout, _compiledPanelItemMap), itemId.Value);
     }
 
     public void SelectItems(IEnumerable<Guid> itemIds, Guid? primaryItemId = null)
     {
-        var normalized = NormalizeSelection(itemIds, primaryItemId);
-        _selectedItemIds = normalized.ItemIds;
-        _selectedItemId = normalized.PrimaryItemId;
+        var normalized = _selectionService.NormalizeSelection(_layout, itemIds, primaryItemId, _panelLayout, _compiledPanelItemMap);
+        _selection.Replace(normalized.ItemIds, normalized.PrimaryItemId);
         SyncSelectionState();
     }
 
     public void ToggleItemSelection(Guid itemId)
     {
-        var targetUnit = GetSelectionUnitItemIds(itemId).ToHashSet();
-        var currentGroupedIds = GetSelectedGroupedItemIds();
+        var targetUnit = _selectionService.GetSelectionUnitItemIds(_layout, itemId, _panelLayout, _compiledPanelItemMap).ToHashSet();
+        var currentGroupedIds = _selectionService.GetSelectedGroupedItemIds(_layout, _selection);
         var targetIsGrouped = targetUnit.Count > 1;
 
         if (targetIsGrouped)
@@ -492,22 +284,13 @@ public sealed class OverlayRuntimeSession
             return;
         }
 
-        if (_selectedItemIds.Contains(itemId))
+        if (_selection.Contains(itemId))
         {
-            _selectedItemIds.Remove(itemId);
-            if (_selectedItemId == itemId)
-            {
-                _selectedItemId = _selectedItemIds.FirstOrDefault();
-                if (_selectedItemIds.Count == 0)
-                {
-                    _selectedItemId = null;
-                }
-            }
+            _selection.Remove(itemId);
         }
         else
         {
-            _selectedItemIds.Add(itemId);
-            _selectedItemId = itemId;
+            _selection.Replace(_selection.ItemIds.Concat(new[] { itemId }), itemId);
         }
 
         SyncSelectionState();
@@ -515,110 +298,13 @@ public sealed class OverlayRuntimeSession
 
     public void SetPrimarySelection(Guid itemId)
     {
-        SelectItems(GetSelectionUnitItemIds(itemId), itemId);
+        SelectItems(_selectionService.GetSelectionUnitItemIds(_layout, itemId, _panelLayout, _compiledPanelItemMap), itemId);
     }
 
-
-    private (HashSet<Guid> ItemIds, Guid? PrimaryItemId) NormalizeSelection(IEnumerable<Guid> itemIds, Guid? primaryItemId)
-    {
-        var requested = itemIds.Distinct().ToList();
-        if (requested.Count == 0)
-        {
-            return (new HashSet<Guid>(), null);
-        }
-
-        var groupedComponents = requested
-            .Select(GetLinkedGroupItemIds)
-            .Where(ids => ids.Count > 1)
-            .Distinct(LinkedGroupComparer.Instance)
-            .ToList();
-
-        if (groupedComponents.Count > 1)
-        {
-            var preferredGroup = primaryItemId is not null
-                ? GetLinkedGroupItemIds(primaryItemId.Value)
-                : groupedComponents[0];
-
-            return (preferredGroup.ToHashSet(), primaryItemId is not null && preferredGroup.Contains(primaryItemId.Value) ? primaryItemId.Value : preferredGroup.First());
-        }
-
-        var normalizedIds = new HashSet<Guid>();
-        foreach (var id in requested)
-        {
-            foreach (var expandedId in GetSelectionUnitItemIds(id))
-            {
-                normalizedIds.Add(expandedId);
-            }
-        }
-
-        Guid? resolvedPrimary = null;
-        if (primaryItemId is not null && normalizedIds.Contains(primaryItemId.Value))
-        {
-            resolvedPrimary = primaryItemId.Value;
-        }
-        else if (normalizedIds.Count > 0)
-        {
-            resolvedPrimary = normalizedIds.First();
-        }
-
-        return (normalizedIds, resolvedPrimary);
-    }
-
-    private IReadOnlyCollection<Guid> GetSelectionUnitItemIds(Guid itemId)
-    {
-        var panelItems = GetCompiledPanelItemIds(itemId);
-        if (panelItems.Count > 0)
-        {
-            return panelItems;
-        }
-
-        var linked = GetLinkedGroupItemIds(itemId);
-        return linked.Count > 1 ? linked : new[] { itemId };
-    }
-
-    private HashSet<Guid> GetSelectedGroupedItemIds()
-    {
-        return _selectedItemIds
-            .Select(GetLinkedGroupItemIds)
-            .Where(ids => ids.Count > 1)
-            .SelectMany(ids => ids)
-            .ToHashSet();
-    }
-
-    private sealed class LinkedGroupComparer : IEqualityComparer<IReadOnlyCollection<Guid>>
-    {
-        public static LinkedGroupComparer Instance { get; } = new();
-
-        public bool Equals(IReadOnlyCollection<Guid>? x, IReadOnlyCollection<Guid>? y)
-        {
-            if (ReferenceEquals(x, y))
-            {
-                return true;
-            }
-
-            if (x is null || y is null || x.Count != y.Count)
-            {
-                return false;
-            }
-
-            return x.ToHashSet().SetEquals(y);
-        }
-
-        public int GetHashCode(IReadOnlyCollection<Guid> obj)
-        {
-            var hash = 17;
-            foreach (var id in obj.Order())
-            {
-                hash = (hash * 31) + id.GetHashCode();
-            }
-
-            return hash;
-        }
-    }
 
     public Guid? HitTestItemId(object? hitSource)
     {
-        return hitSource is null ? null : _layoutHost.HitTestItem(hitSource as System.Windows.DependencyObject)?.Item.Id;
+        return _runtimeSyncService.HitTestItemId(hitSource);
     }
 
     public bool IsResizeHandleHit(object? hitSource, Guid itemId)
@@ -628,7 +314,7 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        return hitSource is not null && _layoutHost.IsResizeHandleHit(hitSource as System.Windows.DependencyObject, itemId);
+        return _runtimeSyncService.IsResizeHandleHit(hitSource, itemId);
     }
 
     public bool IsLocked(Guid itemId) => _layout.Items.Any(x => x.Id == itemId && x.IsLocked);
@@ -641,7 +327,7 @@ public sealed class OverlayRuntimeSession
         var bottom = Math.Max(y, y + height);
 
         return _layout.Placements
-            .Select(ResolvePlacementForShell)
+            .Select(x => LayoutPlacementResolver.ResolveForShell(x, _layout.Canvas, _shellMode))
             .Where(p =>
             {
                 var itemLeft = p.X;
@@ -671,168 +357,113 @@ public sealed class OverlayRuntimeSession
 
     public bool DeleteSelected()
     {
-        if (_selectedItemIds.Count == 0)
+        var changed = _editCommandsService.DeleteSelected(ref _layout, ref _panelLayout, _selection, _compiledPanelItemMap);
+        if (!changed)
         {
             return false;
         }
 
         if (_panelLayout is not null)
         {
-            var selectedPanelIds = GetSelectedPanelIds();
-            if (selectedPanelIds.Count == 0)
-            {
-                return false;
-            }
-
-            var updatedPanels = _panelLayout.Panels.Where(x => !selectedPanelIds.Contains(x.Id)).ToList();
-            if (updatedPanels.Count == _panelLayout.Panels.Count)
-            {
-                return false;
-            }
-
-            _panelLayout = _panelLayout with { Panels = updatedPanels };
             return RecompilePanelLayout(selectLastPanel: false, preserveSelection: false);
         }
 
-        var changed = _mutationService.DeleteItems(ref _layout, _selectedItemIds);
-        if (changed)
-        {
-            _selectedItemId = null;
-            _selectedItemIds.Clear();
-            RefreshRuntime();
-        }
-
-        return changed;
+        _selection.Clear();
+        RefreshRuntime();
+        return true;
     }
 
     public bool DuplicateSelected()
     {
-        if (_selectedItemIds.Count == 0)
+        var changed = _editCommandsService.DuplicateSelected(
+            ref _layout,
+            ref _panelLayout,
+            _selection,
+            _compiledPanelItemMap,
+            out var newSelectionIds,
+            out var primarySelectionId);
+
+        if (!changed)
         {
             return false;
         }
 
         if (_panelLayout is not null)
         {
-            var selectedPanels = GetSelectedPanels();
-            if (selectedPanels.Count == 0)
-            {
-                return false;
-            }
-
-            var nextZ = _panelLayout.Panels.Count == 0 ? 0 : _panelLayout.Panels.Max(x => x.ZIndex) + 1;
-            var duplicates = selectedPanels
-                .OrderBy(x => x.ZIndex)
-                .Select((panel, index) => panel with
-                {
-                    Id = Guid.NewGuid(),
-                    X = panel.X + 20,
-                    Y = panel.Y + 20,
-                    ZIndex = nextZ + index
-                })
-                .ToList();
-
-            _panelLayout = _panelLayout with { Panels = _panelLayout.Panels.Concat(duplicates).ToList() };
             return RecompilePanelLayout(selectLastPanel: true, preserveSelection: false);
         }
 
-        var changed = _mutationService.DuplicateItems(ref _layout, _selectedItemIds, out var newItemIds);
+        RefreshRuntime();
+        SelectItems(newSelectionIds, primarySelectionId);
+        return true;
+    }
+
+    public bool GroupSelectedItems()
+    {
+        var changed = _editCommandsService.GroupSelectedItems(ref _layout, _selection);
+        if (!changed)
+        {
+            return false;
+        }
+
+        var orderedIds = _selection.ItemIds.ToList();
+        var anchorId = _selection.PrimaryItemId is not null && _selection.ItemIds.Contains(_selection.PrimaryItemId.Value) ? _selection.PrimaryItemId.Value : orderedIds[0];
+        RefreshRuntime();
+        SelectItems(orderedIds, anchorId);
+        return true;
+    }
+
+    public bool UngroupSelected()
+    {
+        var changed = _editCommandsService.UngroupSelected(ref _layout, _selection);
         if (!changed)
         {
             return false;
         }
 
         RefreshRuntime();
-        SelectItems(newItemIds, newItemIds.LastOrDefault());
+        SyncSelectionState();
         return true;
-    }
-
-    public bool GroupSelectedItems()
-    {
-        if (_selectedItemIds.Count < 2)
-        {
-            return false;
-        }
-
-        var orderedIds = _selectedItemIds.ToList();
-        var anchorId = _selectedItemId is not null && _selectedItemIds.Contains(_selectedItemId.Value) ? _selectedItemId.Value : orderedIds[0];
-        var changed = false;
-        foreach (var itemId in orderedIds.Where(x => x != anchorId))
-        {
-            changed |= _mutationService.GroupItems(ref _layout, anchorId, itemId);
-        }
-
-        if (changed)
-        {
-            RefreshRuntime();
-            SelectItems(orderedIds, anchorId);
-        }
-
-        return changed;
-    }
-
-    public bool UngroupSelected()
-    {
-        if (_selectedItemIds.Count == 0)
-        {
-            return false;
-        }
-
-        var changed = false;
-        foreach (var itemId in _selectedItemIds.ToList())
-        {
-            changed |= _mutationService.UngroupItem(ref _layout, itemId);
-        }
-
-        if (changed)
-        {
-            RefreshRuntime();
-            SyncSelectionState();
-        }
-
-        return changed;
     }
 
     public bool SetLockSelected(bool isLocked)
     {
-        if (_selectedItemIds.Count == 0)
+        var changed = _editCommandsService.SetLockSelected(ref _layout, ref _panelLayout, _selection, _compiledPanelItemMap, isLocked);
+        if (!changed)
         {
             return false;
         }
 
-        var changed = _mutationService.ToggleLockItems(ref _layout, _selectedItemIds, isLocked);
-        if (changed)
+        if (_panelLayout is not null)
         {
-            RefreshRuntime();
-            SyncSelectionState();
+            return RecompilePanelLayout(selectLastPanel: false, preserveSelection: true);
         }
 
-        return changed;
+        RefreshRuntime();
+        SyncSelectionState();
+        return true;
     }
 
     public bool CopySelected()
     {
-        if (_selectedItemIds.Count == 0)
+        if (_selection.ItemIds.Count == 0)
         {
             return false;
         }
 
-        _clipboardLayout = _layout;
-        _clipboardItemIds = _selectedItemIds.OrderBy(x => x).ToList();
-        _pasteSequence = 0;
+        _clipboard.Set(_layout, _selection.ItemIds);
         return true;
     }
 
     public bool PasteClipboard()
     {
-        if (_clipboardLayout is null || _clipboardItemIds.Count == 0)
+        if (!_clipboard.HasContent || _clipboard.SourceLayout is null)
         {
             return false;
         }
 
-        _pasteSequence++;
-        var offset = 24 * _pasteSequence;
-        var changed = _mutationService.PasteItemsFromLayout(ref _layout, _clipboardLayout, _clipboardItemIds, offset, offset, out var newItemIds);
+        var offset = 24 * _clipboard.AdvancePasteSequence();
+        var changed = _mutationService.PasteItemsFromLayout(ref _layout, _clipboard.SourceLayout, _clipboard.ItemIds, offset, offset, out var newItemIds);
         if (!changed)
         {
             return false;
@@ -887,123 +518,46 @@ public sealed class OverlayRuntimeSession
 
     public LayoutMoveResult MoveSelectedWithSnap(double deltaX, double deltaY, double canvasWidth, double canvasHeight, bool bypassSnap)
     {
-        if (_selectedItemId is null)
+        var result = _movementService.MoveSelectedWithSnap(
+            ref _layout,
+            _selection,
+            _panelLayout,
+            _compiledPanelItemMap,
+            deltaX,
+            deltaY,
+            canvasWidth,
+            canvasHeight,
+            _snappingEnabled,
+            bypassSnap,
+            _shellMode);
+        if (result.Moved)
         {
-            return new LayoutMoveResult(false, null, null);
-        }
-
-        if (IsRuntimeShell)
-        {
-            var runtimeMoveIds = GetActiveMoveItemIds().Where(id => !IsLocked(id)).ToList();
-            if (runtimeMoveIds.Count == 0)
-            {
-                return new LayoutMoveResult(false, null, null);
-            }
-
-            var runtimePlacements = _layout.Placements
-                .Where(x => runtimeMoveIds.Contains(x.ItemId))
-                .Select(ResolvePlacementForShell)
+            var movedItemIds = _selectionService.GetActiveMoveItemIds(_layout, _selection, _panelLayout, _compiledPanelItemMap)
+                .Where(id => !IsLocked(id))
                 .ToList();
-
-            if (runtimePlacements.Count == 0)
-            {
-                return new LayoutMoveResult(false, null, null);
-            }
-
-            var runtimeBounds = GetBounds(runtimePlacements);
-            var targetX = runtimeBounds.X + deltaX;
-            var targetY = runtimeBounds.Y + deltaY;
-            var finalX = Math.Clamp(targetX, 0, Math.Max(0, canvasWidth - runtimeBounds.Width));
-            var finalY = Math.Clamp(targetY, 0, Math.Max(0, canvasHeight - runtimeBounds.Height));
-            var deltaAppliedX = finalX - runtimeBounds.X;
-            var deltaAppliedY = finalY - runtimeBounds.Y;
-
-            var changed = _mutationService.MoveItemsRuntimeDeltaBy(ref _layout, runtimeMoveIds, deltaAppliedX, deltaAppliedY);
-            if (changed)
-            {
-                SyncPlacementsToRuntime(runtimeMoveIds);
-            }
-
-            return new LayoutMoveResult(changed, null, null);
+            _runtimeSyncService.SyncPlacementsToRuntime(_layout, movedItemIds);
         }
 
-        var groupItemIds = GetActiveMoveItemIds();
-        var movableItemIds = groupItemIds.Where(id => !IsLocked(id)).ToList();
-        if (movableItemIds.Count == 0)
-        {
-            return new LayoutMoveResult(false, null, null);
-        }
-
-        var groupPlacements = _layout.Placements.Where(x => movableItemIds.Contains(x.ItemId)).Select(ResolvePlacementForShell).ToList();
-        if (groupPlacements.Count == 0)
-        {
-            return new LayoutMoveResult(false, null, null);
-        }
-
-        var groupBounds = GetBounds(groupPlacements);
-        var targetGroupX = groupBounds.X + deltaX;
-        var targetGroupY = groupBounds.Y + deltaY;
-        var finalGroupX = targetGroupX;
-        var finalGroupY = targetGroupY;
-        double? snapX = null;
-        double? snapY = null;
-
-        if (_snappingEnabled && !bypassSnap)
-        {
-            var snapped = _snapService.SnapGroupPosition(_layout, movableItemIds, targetGroupX, targetGroupY, groupBounds.Width, groupBounds.Height, canvasWidth, canvasHeight);
-            finalGroupX = snapped.X;
-            finalGroupY = snapped.Y;
-            snapX = snapped.SnapX;
-            snapY = snapped.SnapY;
-        }
-
-        var appliedDeltaX = finalGroupX - groupBounds.X;
-        var appliedDeltaY = finalGroupY - groupBounds.Y;
-        var changedGroup = _mutationService.MoveItemsBy(ref _layout, movableItemIds, appliedDeltaX, appliedDeltaY);
-        if (changedGroup)
-        {
-            SyncPlacementsToRuntime(movableItemIds);
-        }
-
-        return new LayoutMoveResult(changedGroup, snapX, snapY);
+        return result;
     }
 
     public LayoutMoveResult ResizeSelectedWithSnap(double deltaWidth, double deltaHeight, double canvasWidth, double canvasHeight, bool bypassSnap)
     {
-        if (_selectedItemId is null || IsLocked(_selectedItemId.Value))
+        var result = _movementService.ResizeSelectedWithSnap(
+            ref _layout,
+            _selection,
+            deltaWidth,
+            deltaHeight,
+            canvasWidth,
+            canvasHeight,
+            _snappingEnabled,
+            bypassSnap);
+        if (result.Moved && _selection.PrimaryItemId is not null)
         {
-            return new LayoutMoveResult(false, null, null);
+            _runtimeSyncService.SyncPlacementToRuntime(_layout, _selection.PrimaryItemId.Value);
         }
 
-        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == _selectedItemId.Value);
-        if (placement is null)
-        {
-            return new LayoutMoveResult(false, null, null);
-        }
-
-        var targetWidth = placement.Width + deltaWidth;
-        var targetHeight = placement.Height + deltaHeight;
-        var finalWidth = targetWidth;
-        var finalHeight = targetHeight;
-        double? snapX = null;
-        double? snapY = null;
-
-        if (_snappingEnabled && !bypassSnap)
-        {
-            var snapped = _snapService.SnapResize(_layout, _selectedItemId.Value, targetWidth, targetHeight, canvasWidth, canvasHeight);
-            finalWidth = snapped.Width;
-            finalHeight = snapped.Height;
-            snapX = snapped.SnapX;
-            snapY = snapped.SnapY;
-        }
-
-        var changed = _mutationService.ResizeItemTo(ref _layout, _selectedItemId.Value, finalWidth, finalHeight);
-        if (changed)
-        {
-            SyncPlacementToRuntime(_selectedItemId.Value);
-        }
-
-        return new LayoutMoveResult(changed, snapX, snapY);
+        return result;
     }
 
 
@@ -1011,13 +565,13 @@ public sealed class OverlayRuntimeSession
 
     public PanelPresetDocument? CreateSelectedPanelPreset(string name, string category = "Custom")
     {
-        if (_selectedItemIds.Count == 0)
+        if (_selection.ItemIds.Count == 0)
         {
             return null;
         }
 
         var composer = new PanelPresetComposer();
-        return composer.CreateFromLayoutSelection(_layout, _selectedItemIds, name, category);
+        return composer.CreateFromLayoutSelection(_layout, _selection.ItemIds, name, category);
     }
 
     public bool InsertPanelPreset(PanelPresetDocument preset, double x, double y)
@@ -1067,25 +621,14 @@ public sealed class OverlayRuntimeSession
 
     public bool StartNewPanelLayout(string name = "Panel Layout")
     {
-        var canvasWidth = Math.Max(1280, Math.Round(SystemParameters.PrimaryScreenWidth));
-        var canvasHeight = Math.Max(720, Math.Round(SystemParameters.PrimaryScreenHeight));
-
-        _panelLayout = new PanelLayoutDocument(
-            Version: _layout.Version,
-            Name: string.IsNullOrWhiteSpace(name) ? "Panel Layout" : name,
-            Canvas: new LayoutCanvas(canvasWidth, canvasHeight),
-            Panels: Array.Empty<PanelLayoutInstance>());
+        _panelLayout = _panelLayoutService.CreateNew(name, _layout);
         _panelLayoutPath = null;
         return RecompilePanelLayout(selectLastPanel: false);
     }
 
     public bool OpenPanelLayout(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-        var library = new PanelLayoutLibrary();
-        var panelLayout = library.Load(path);
-        _panelLayout = panelLayout;
+        _panelLayout = _panelLayoutService.Load(path);
         _panelLayoutPath = path;
         return RecompilePanelLayout(selectLastPanel: false);
     }
@@ -1100,8 +643,7 @@ public sealed class OverlayRuntimeSession
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         SyncPanelLayoutFromCompiledLayout();
-        var library = new PanelLayoutLibrary();
-        library.Save(path, _panelLayout);
+        _panelLayoutService.Save(path, _panelLayout);
         _panelLayoutPath = path;
         return true;
     }
@@ -1150,34 +692,27 @@ public sealed class OverlayRuntimeSession
         _compiledPanelItemMap = new Dictionary<Guid, IReadOnlyList<Guid>>();
         _layout = _fileStore.Load(_layoutPath);
         var validIds = _layout.Items.Select(x => x.Id).ToHashSet();
-        _selectedItemIds.RemoveWhere(x => !validIds.Contains(x));
-        if (_selectedItemId is not null && !validIds.Contains(_selectedItemId.Value))
-        {
-            _selectedItemId = _selectedItemIds.FirstOrDefault();
-            if (_selectedItemIds.Count == 0)
-            {
-                _selectedItemId = null;
-            }
-        }
+        _selection.Replace(_selection.ItemIds.Where(validIds.Contains), _selection.PrimaryItemId);
 
         RefreshRuntime();
     }
 
     private bool ReorderSelected(Func<IReadOnlyList<LayoutItemPlacement>, IEnumerable<LayoutItemPlacement>, Dictionary<Guid, int>> reorder)
     {
-        if (_selectedItemIds.Count == 0)
+        var changed = _editCommandsService.ReorderSelected(ref _layout, ref _panelLayout, _selection, _compiledPanelItemMap, reorder);
+        if (!changed)
         {
             return false;
         }
 
-        var changed = _mutationService.SetZIndex(ref _layout, _selectedItemIds, reorder);
-        if (changed)
+        if (_panelLayout is not null)
         {
-            RefreshRuntime();
-            SyncSelectionState();
+            return RecompilePanelLayout(selectLastPanel: false, preserveSelection: true);
         }
 
-        return changed;
+        RefreshRuntime();
+        SyncSelectionState();
+        return true;
     }
 
     private bool RecompilePanelLayout(bool selectLastPanel, bool preserveSelection = false)
@@ -1187,14 +722,7 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
-        var presetEntries = _panelPresetLibrary.List(_panelPresetLibrary.GetDefaultDirectory(_layoutPath))
-            .GroupBy(x => x.Id)
-            .ToDictionary(x => x.Key, x => x.Last());
-
-        _layout = _panelLayoutCompiler.Compile(
-            _panelLayout,
-            presetId => presetEntries.TryGetValue(presetId, out var entry) ? _panelPresetLibrary.Load(entry.Path) : null,
-            out var panelItemMap);
+        _layout = _panelLayoutService.Compile(_panelLayout, out var panelItemMap);
 
         var previousSelectedPanelIds = preserveSelection ? GetSelectedPanelIds().ToHashSet() : new HashSet<Guid>();
         _compiledPanelItemMap = panelItemMap;
@@ -1232,69 +760,19 @@ public sealed class OverlayRuntimeSession
         return true;
     }
 
-    private IReadOnlyList<Guid> GetCompiledPanelItemIds(Guid itemId)
+        private PanelLayoutInstance? ResolveSelectedPanel(Guid? itemId)
     {
-        if (_panelLayout is null)
-        {
-            return Array.Empty<Guid>();
-        }
-
-        foreach (var entry in _compiledPanelItemMap)
-        {
-            if (entry.Value.Contains(itemId))
-            {
-                return entry.Value;
-            }
-        }
-
-        return Array.Empty<Guid>();
-    }
-
-    private PanelLayoutInstance? ResolveSelectedPanel(Guid? itemId)
-    {
-        if (_panelLayout is null || itemId is null)
-        {
-            return null;
-        }
-
-        foreach (var panel in _panelLayout.Panels)
-        {
-            if (_compiledPanelItemMap.TryGetValue(panel.Id, out var itemIds) && itemIds.Contains(itemId.Value))
-            {
-                return panel;
-            }
-        }
-
-        return null;
+        return _selectionPresentationService.ResolveSelectedPanel(itemId, _panelLayout, _compiledPanelItemMap);
     }
 
     private IReadOnlyList<Guid> GetSelectedPanelIds()
     {
-        if (_panelLayout is null || _selectedItemIds.Count == 0)
-        {
-            return Array.Empty<Guid>();
-        }
-
-        return _compiledPanelItemMap
-            .Where(x => x.Value.Any(_selectedItemIds.Contains))
-            .Select(x => x.Key)
-            .ToList();
+        return _selectionPresentationService.GetSelectedPanelIds(_selection, _panelLayout, _compiledPanelItemMap);
     }
 
     private IReadOnlyList<PanelLayoutInstance> GetSelectedPanels()
     {
-        if (_panelLayout is null)
-        {
-            return Array.Empty<PanelLayoutInstance>();
-        }
-
-        var selectedIds = GetSelectedPanelIds().ToHashSet();
-        if (selectedIds.Count == 0)
-        {
-            return Array.Empty<PanelLayoutInstance>();
-        }
-
-        return _panelLayout.Panels.Where(x => selectedIds.Contains(x.Id)).OrderBy(x => x.ZIndex).ToList();
+        return _selectionPresentationService.GetSelectedPanels(_selection, _panelLayout, _compiledPanelItemMap);
     }
 
     private void SyncPanelLayoutFromCompiledLayout()
@@ -1335,103 +813,17 @@ public sealed class OverlayRuntimeSession
 
     private void RefreshRuntime()
     {
-        var runtimeItems = _composer.Compose(_layout);
-        _layoutHost.Load(runtimeItems);
-        SyncSelectionState();
+        _runtimeSyncService.RefreshRuntime(_layout, _selection);
     }
 
     private void SyncSelectionState()
     {
-        _layoutHost.SetSelectedItems(_selectedItemId, _selectedItemIds);
-        _layoutHost.SetGroupHighlight(GetHighlightedGroupItemIds(_selectedItemId));
-    }
-
-    private IReadOnlyList<Guid> GetActiveMoveItemIds()
-    {
-        if (_selectedItemIds.Count > 1)
-        {
-            return _selectedItemIds.ToList();
-        }
-
-        return _selectedItemId is null ? Array.Empty<Guid>() : GetLinkedGroupItemIds(_selectedItemId.Value);
-    }
-
-    private IReadOnlyList<Guid> GetHighlightedGroupItemIds(Guid? itemId)
-    {
-        if (itemId is null)
-        {
-            return Array.Empty<Guid>();
-        }
-
-        var groupIds = GetLinkedGroupItemIds(itemId.Value);
-        return groupIds.Count <= 1 ? Array.Empty<Guid>() : groupIds;
-    }
-
-    private IReadOnlyList<Guid> GetLinkedGroupItemIds(Guid anchorItemId)
-    {
-        var visited = new HashSet<Guid> { anchorItemId };
-        var queue = new Queue<Guid>();
-        queue.Enqueue(anchorItemId);
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            foreach (var next in _layout.Links
-                         .Where(x => x.SourceItemId == current || x.TargetItemId == current)
-                         .Select(x => x.SourceItemId == current ? x.TargetItemId : x.SourceItemId))
-            {
-                if (visited.Add(next))
-                {
-                    queue.Enqueue(next);
-                }
-            }
-        }
-
-        return visited.ToList();
-    }
-
-    private void SyncPlacementsToRuntime(IReadOnlyCollection<Guid> itemIds)
-    {
-        foreach (var itemId in itemIds)
-        {
-            SyncPlacementToRuntime(itemId);
-        }
-    }
-
-    private void SyncPlacementToRuntime(Guid itemId)
-    {
-        var placement = _layout.Placements.FirstOrDefault(x => x.ItemId == itemId);
-        if (placement is null)
-        {
-            return;
-        }
-
-        _layoutHost.TryUpdatePlacement(itemId, ResolvePlacementForShell(placement));
+        _runtimeSyncService.SyncSelectionState(_layout, _selection);
     }
 
     private void SyncAllPlacementsToRuntime()
     {
-        foreach (var placement in _layout.Placements)
-        {
-            _layoutHost.TryUpdatePlacement(placement.ItemId, ResolvePlacementForShell(placement));
-        }
-    }
-
-    private static (double X, double Y, double Width, double Height) GetBounds(IReadOnlyList<LayoutItemPlacement> placements)
-    {
-        var left = placements.Min(x => x.X);
-        var top = placements.Min(x => x.Y);
-        var right = placements.Max(x => x.X + x.Width);
-        var bottom = placements.Max(x => x.Y + x.Height);
-        return (left, top, right - left, bottom - top);
-    }
-
-
-    private bool IsRuntimeShell => _shellMode != OverlayShellMode.Editor;
-
-    private LayoutItemPlacement ResolvePlacementForShell(LayoutItemPlacement placement)
-    {
-        return LayoutPlacementResolver.ResolveForShell(placement, _layout.Canvas, _shellMode);
+        _runtimeSyncService.SyncAllPlacementsToRuntime(_layout);
     }
 
     private static Dictionary<Guid, int> BuildZMap(IReadOnlyList<LayoutItemPlacement> orderedPlacements)

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using SuperOverlay.Dashboards.Contracts;
 using SuperOverlay.LayoutBuilder.Contracts;
 
@@ -12,28 +11,7 @@ public sealed class GearDashboardDefinition : IDashboardDefinition
 
     public object CreateDefaultSettings() => new GearDashboardSettings();
 
-    public object MaterializeSettings(object rawSettings)
-    {
-        if (rawSettings is GearDashboardSettings typed)
-        {
-            return typed;
-        }
-
-        if (rawSettings is string json && !string.IsNullOrWhiteSpace(json))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<GearDashboardSettings>(json)
-                       ?? new GearDashboardSettings();
-            }
-            catch (JsonException)
-            {
-                return new GearDashboardSettings();
-            }
-        }
-
-        return new GearDashboardSettings();
-    }
+    public object MaterializeSettings(object rawSettings) => DashboardSettingsMaterializer.Materialize<GearDashboardSettings>(rawSettings);
 
     public ILayoutItemPresenter CreatePresenter()
     {

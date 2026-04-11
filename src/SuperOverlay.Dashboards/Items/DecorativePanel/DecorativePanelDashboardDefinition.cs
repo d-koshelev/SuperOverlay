@@ -1,4 +1,3 @@
-using System.Text.Json;
 using SuperOverlay.Dashboards.Contracts;
 using SuperOverlay.LayoutBuilder.Contracts;
 
@@ -12,28 +11,7 @@ public sealed class DecorativePanelDashboardDefinition : IDashboardDefinition
 
     public object CreateDefaultSettings() => new DecorativePanelDashboardSettings();
 
-    public object MaterializeSettings(object rawSettings)
-    {
-        if (rawSettings is DecorativePanelDashboardSettings typed)
-        {
-            return typed;
-        }
-
-        if (rawSettings is string json && !string.IsNullOrWhiteSpace(json))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<DecorativePanelDashboardSettings>(json)
-                       ?? new DecorativePanelDashboardSettings();
-            }
-            catch (JsonException)
-            {
-                return new DecorativePanelDashboardSettings();
-            }
-        }
-
-        return new DecorativePanelDashboardSettings();
-    }
+    public object MaterializeSettings(object rawSettings) => DashboardSettingsMaterializer.Materialize<DecorativePanelDashboardSettings>(rawSettings);
 
     public ILayoutItemPresenter CreatePresenter()
     {

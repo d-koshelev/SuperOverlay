@@ -1,4 +1,3 @@
-using System.Text.Json;
 using SuperOverlay.Dashboards.Contracts;
 using SuperOverlay.LayoutBuilder.Contracts;
 
@@ -12,28 +11,7 @@ public sealed class SpeedDashboardDefinition : IDashboardDefinition
 
     public object CreateDefaultSettings() => new SpeedDashboardSettings();
 
-    public object MaterializeSettings(object rawSettings)
-    {
-        if (rawSettings is SpeedDashboardSettings typed)
-        {
-            return typed;
-        }
-
-        if (rawSettings is string json && !string.IsNullOrWhiteSpace(json))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<SpeedDashboardSettings>(json)
-                       ?? new SpeedDashboardSettings();
-            }
-            catch (JsonException)
-            {
-                return new SpeedDashboardSettings();
-            }
-        }
-
-        return new SpeedDashboardSettings();
-    }
+    public object MaterializeSettings(object rawSettings) => DashboardSettingsMaterializer.Materialize<SpeedDashboardSettings>(rawSettings);
 
     public ILayoutItemPresenter CreatePresenter()
     {
