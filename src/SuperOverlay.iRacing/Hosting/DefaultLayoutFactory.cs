@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Text.Json;
 using SuperOverlay.Dashboards.Items.Gear;
 using SuperOverlay.Dashboards.Items.Speed;
@@ -54,10 +55,13 @@ public static class DefaultLayoutFactory
                 10)
         };
 
+        var canvasWidth = Math.Max(1280, Math.Round(SystemParameters.PrimaryScreenWidth));
+        var canvasHeight = Math.Max(720, Math.Round(SystemParameters.PrimaryScreenHeight));
+
         return new LayoutDocument(
             "1.0",
             "Default Layout",
-            new LayoutCanvas(400, 300),
+            new LayoutCanvas(canvasWidth, canvasHeight),
             items,
             placements,
             links);

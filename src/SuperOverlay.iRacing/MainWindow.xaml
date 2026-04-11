@@ -14,63 +14,241 @@
         <Border x:Name="EditorBar"
                 DockPanel.Dock="Top"
                 Background="#FFF7F8FA"
-                Padding="8"
+                BorderBrush="#FFE5E7EB"
+                BorderThickness="0,0,0,1"
+                Padding="10"
                 MouseLeftButtonDown="EditorBar_MouseLeftButtonDown">
             <StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Add"
-                               Foreground="#FF1F2937"
-                               VerticalAlignment="Center"
-                               Margin="12,0,8,0"/>
+                <WrapPanel Margin="0,0,0,8">
+                    <Border Background="#FFFFFFFF"
+                            BorderBrush="#FFD6DCE5"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="10"
+                            Margin="0,0,10,10">
+                        <StackPanel Width="250">
+                            <Border Background="#FFF3F6FA"
+                                    BorderBrush="#FFE2E8F0"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="6"
+                                    Margin="0,0,0,8">
+                                <TextBlock Text="ADD"
+                                           Foreground="#FF475569"
+                                           FontSize="11"
+                                           FontWeight="Bold"/>
+                            </Border>
 
-                    <ComboBox x:Name="CatalogComboBox"
-                              Width="180"
-                              DisplayMemberPath="DisplayName"/>
+                            <WrapPanel Margin="0,0,0,6">
+                                <ComboBox x:Name="CatalogComboBox"
+                                          Width="180"
+                                          DisplayMemberPath="DisplayName"
+                                          Margin="0,0,8,8"/>
+                                <Button Content="Add"
+                                        Padding="12,4"
+                                        Margin="0,0,0,8"
+                                        Click="AddSelectedCatalogItem_OnClick"/>
+                            </WrapPanel>
 
-                    <Button Content="Add"
-                            Margin="8,0,0,0"
-                            Click="AddSelectedCatalogItem_OnClick"/>
+                            <TextBlock Foreground="#FF6B7280"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="Add widgets to the current panel or flat layout."/>
+                        </StackPanel>
+                    </Border>
 
-                    <ToggleButton x:Name="SnapToggleButton"
-                                  Content="Snap: On"
-                                  IsChecked="True"
-                                  Margin="12,0,0,0"
-                                  Padding="10,4"
-                                  Checked="SnapToggleButton_OnChecked"
-                                  Unchecked="SnapToggleButton_OnUnchecked"/>
+                    <Border Background="#FFFFFFFF"
+                            BorderBrush="#FFD6DCE5"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="10"
+                            Margin="0,0,10,10">
+                        <StackPanel Width="360">
+                            <Border Background="#FFF3F6FA"
+                                    BorderBrush="#FFE2E8F0"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="6"
+                                    Margin="0,0,0,8">
+                                <TextBlock Text="LAYOUT"
+                                           Foreground="#FF475569"
+                                           FontSize="11"
+                                           FontWeight="Bold"/>
+                            </Border>
 
-                    <Button Content="Save"
-                            Margin="12,0,0,0"
-                            Click="SaveLayout_OnClick"/>
+                            <WrapPanel Margin="0,0,0,6">
+                                <Button Content="Save Layout"
+                                        Margin="0,0,8,8"
+                                        Click="SaveLayout_OnClick"/>
+                                <Button Content="Reload Layout"
+                                        Margin="0,0,8,8"
+                                        Click="ReloadLayout_OnClick"/>
+                                <Button Content="New Panel Layout"
+                                        Margin="0,0,8,8"
+                                        Click="NewPanelLayout_OnClick"/>
+                                <Button Content="Open Panel Layout"
+                                        Margin="0,0,8,8"
+                                        Click="OpenPanelLayout_OnClick"/>
+                                <Button Content="Save Panel Layout"
+                                        Margin="0,0,8,8"
+                                        Click="SavePanelLayout_OnClick"/>
+                            </WrapPanel>
 
-                    <Button Content="Reload"
-                            Margin="4,0,0,0"
-                            Click="ReloadLayout_OnClick"/>
-                </StackPanel>
+                            <TextBlock Foreground="#FF6B7280"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="Manage the full monitor composition and panel-based layout documents."/>
+                        </StackPanel>
+                    </Border>
 
-                <TextBlock Margin="12,8,0,0"
-                           Foreground="#FF6B7280"
-                           FontSize="11"
-                           TextWrapping="Wrap">
-                    <Run Text="Shortcuts: "/>
-                    <Run Text="Del delete"/>
-                    <Run Text=" • Ctrl+C copy"/>
-                    <Run Text=" • Ctrl+V paste"/>
-                    <Run Text=" • Ctrl+D duplicate"/>
-                    <Run Text=" • Ctrl+G group"/>
-                    <Run Text=" • Ctrl+Shift+G ungroup"/>
-                    <Run Text=" • Ctrl+L lock / Ctrl+Shift+L unlock"/>
-                    <Run Text=" • [ / ] reorder"/>
-                    <Run Text=" • Shift+[ / Shift+] back/front"/>
-                    <Run Text=" • Arrows move"/>
-                    <Run Text=" • Shift+Arrows ×5"/>
-                    <Run Text=" • Ctrl+S save"/>
-                    <Run Text=" • F5 reload"/>
-                    <Run Text=" • Esc clear"/>
-                    <Run Text=" • Alt bypass snap"/>
-                    <LineBreak/>
-                    <Run Text="Mouse: Ctrl+click multi-select, drag on empty canvas for box select, right click for actions, drag selected items, resize from the handle."/>
-                </TextBlock>
+                    <Border Background="#FFFFFFFF"
+                            BorderBrush="#FFD6DCE5"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="10"
+                            Margin="0,0,10,10">
+                        <StackPanel Width="290">
+                            <Border Background="#FFF3F6FA"
+                                    BorderBrush="#FFE2E8F0"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="6"
+                                    Margin="0,0,0,8">
+                                <TextBlock Text="PANELS"
+                                           Foreground="#FF475569"
+                                           FontSize="11"
+                                           FontWeight="Bold"/>
+                            </Border>
+
+                            <WrapPanel Margin="0,0,0,6">
+                                <Button Content="Save Panel"
+                                        Margin="0,0,8,8"
+                                        Click="SavePanelPreset_OnClick"/>
+                                <Button Content="Open Panel"
+                                        Margin="0,0,8,8"
+                                        Click="OpenPanelPreset_OnClick"/>
+                                <Button Content="Insert Panel"
+                                        Margin="0,0,8,8"
+                                        Click="InsertPanelPreset_OnClick"/>
+                            </WrapPanel>
+
+                            <TextBlock Foreground="#FF6B7280"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="Save reusable panel presets, open them for editing, and insert them into layouts."/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#FFFFFFFF"
+                            BorderBrush="#FFD6DCE5"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="10"
+                            Margin="0,0,0,10">
+                        <StackPanel Width="520">
+                            <Border Background="#FFF3F6FA"
+                                    BorderBrush="#FFE2E8F0"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="6"
+                                    Margin="0,0,0,8">
+                                <TextBlock Text="CANVAS"
+                                           Foreground="#FF475569"
+                                           FontSize="11"
+                                           FontWeight="Bold"/>
+                            </Border>
+
+                            <WrapPanel Margin="0,0,0,6">
+                                <ToggleButton x:Name="SnapToggleButton"
+                                              Content="Snap: On"
+                                              IsChecked="True"
+                                              Padding="10,4"
+                                              Margin="0,0,8,8"
+                                              Checked="SnapToggleButton_OnChecked"
+                                              Unchecked="SnapToggleButton_OnUnchecked"/>
+
+                                <TextBlock Text="W"
+                                           Foreground="#FF1F2937"
+                                           VerticalAlignment="Center"
+                                           Margin="4,0,4,8"/>
+                                <TextBox x:Name="CanvasWidthTextBox"
+                                         Width="72"
+                                         VerticalContentAlignment="Center"
+                                         Text="1920"
+                                         Margin="0,0,8,8"/>
+
+                                <TextBlock Text="H"
+                                           Foreground="#FF1F2937"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,4,8"/>
+                                <TextBox x:Name="CanvasHeightTextBox"
+                                         Width="72"
+                                         VerticalContentAlignment="Center"
+                                         Text="1080"
+                                         Margin="0,0,8,8"/>
+
+                                <Button Content="Apply Canvas"
+                                        Margin="0,0,12,8"
+                                        Click="ApplyCanvasSize_OnClick"/>
+
+                                <ComboBox x:Name="CanvasPresetComboBox"
+                                          Width="190"
+                                          VerticalContentAlignment="Center"
+                                          Margin="0,0,8,8"
+                                          SelectionChanged="CanvasPresetComboBox_OnSelectionChanged">
+                                    <ComboBoxItem Content="16:9 1920×1080" Tag="1920x1080"/>
+                                    <ComboBoxItem Content="16:9 2560×1440" Tag="2560x1440"/>
+                                    <ComboBoxItem Content="21:9 3440×1440" Tag="3440x1440"/>
+                                    <ComboBoxItem Content="16:9 3840×2160" Tag="3840x2160"/>
+                                    <ComboBoxItem Content="32:9 3840×1080" Tag="3840x1080"/>
+                                    <ComboBoxItem Content="32:9 5120×1440" Tag="5120x1440"/>
+                                    <ComboBoxItem Content="32:9 7680×2160" Tag="7680x2160"/>
+                                    <ComboBoxItem Content="Triple 5760×1080" Tag="5760x1080"/>
+                                    <ComboBoxItem Content="Triple 7680×1440" Tag="7680x1440"/>
+                                    <ComboBoxItem Content="Triple 10320×1440" Tag="10320x1440"/>
+                                </ComboBox>
+
+                                <Button Content="Apply Preset"
+                                        Margin="0,0,8,8"
+                                        Click="ApplyCanvasPreset_OnClick"/>
+                            </WrapPanel>
+
+                            <TextBlock Foreground="#FF6B7280"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="Set workspace size, screen presets and snapping for single, ultrawide and triple-screen layouts."/>
+                        </StackPanel>
+                    </Border>
+                </WrapPanel>
+
+                <Border Background="#FFFDFDFD"
+                        BorderBrush="#FFE5E7EB"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="How it works"
+                                   Foreground="#FF1F2937"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Margin="0,4,0,0"
+                                   Foreground="#FF6B7280"
+                                   FontSize="11"
+                                   TextWrapping="Wrap">
+                            <Run Text="Build "/>
+                            <Run Text="Panels" FontWeight="SemiBold"/>
+                            <Run Text=" from widgets. Build "/>
+                            <Run Text="Layouts" FontWeight="SemiBold"/>
+                            <Run Text=" from panel presets. In "/>
+                            <Run Text="Panel Layout" FontWeight="SemiBold"/>
+                            <Run Text=" mode, panels move as whole blocks."/>
+                        </TextBlock>
+                        <TextBlock Margin="0,4,0,0"
+                                   Foreground="#FF6B7280"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   Text="Quick controls: Ctrl+Click multi-select • Del delete • Ctrl+C / Ctrl+V copy-paste • Arrows move • Alt bypass snap"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Border>
 
@@ -81,99 +259,112 @@
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0">
-                <Border Margin="12"
-                        CornerRadius="10"
-                        BorderBrush="#FFDCE2E8"
-                        BorderThickness="1"
-                        IsHitTestVisible="False">
-                    <Border.Background>
-                        <DrawingBrush TileMode="Tile"
-                                      Viewport="0,0,24,24"
-                                      ViewportUnits="Absolute"
-                                      Stretch="None">
-                            <DrawingBrush.Drawing>
-                                <DrawingGroup>
-                                    <GeometryDrawing Brush="#FFF9FAFB"
-                                                     Geometry="M0,0 H24 V24 H0 Z"/>
-                                    <GeometryDrawing>
-                                        <GeometryDrawing.Pen>
-                                            <Pen Brush="#0D334155" Thickness="1"/>
-                                        </GeometryDrawing.Pen>
-                                        <GeometryDrawing.Geometry>
-                                            <GeometryGroup>
-                                                <LineGeometry StartPoint="24,0" EndPoint="24,24"/>
-                                                <LineGeometry StartPoint="0,24" EndPoint="24,24"/>
-                                            </GeometryGroup>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
-                                    <GeometryDrawing>
-                                        <GeometryDrawing.Brush>
-                                            <SolidColorBrush Color="#12334155"/>
-                                        </GeometryDrawing.Brush>
-                                        <GeometryDrawing.Geometry>
-                                            <EllipseGeometry Center="24,24" RadiusX="1.25" RadiusY="1.25"/>
-                                        </GeometryDrawing.Geometry>
-                                    </GeometryDrawing>
-                                </DrawingGroup>
-                            </DrawingBrush.Drawing>
-                        </DrawingBrush>
-                    </Border.Background>
-                </Border>
+                <ScrollViewer Margin="12"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              CanContentScroll="False">
+                    <Grid HorizontalAlignment="Left"
+                          VerticalAlignment="Top">
+                        <Border x:Name="CanvasFrameBorder"
+                                Width="1920"
+                                Height="1080"
+                                CornerRadius="10"
+                                BorderBrush="#FFDCE2E8"
+                                BorderThickness="1"
+                                IsHitTestVisible="False">
+                            <Border.Background>
+                                <DrawingBrush TileMode="Tile"
+                                              Viewport="0,0,24,24"
+                                              ViewportUnits="Absolute"
+                                              Stretch="None">
+                                    <DrawingBrush.Drawing>
+                                        <DrawingGroup>
+                                            <GeometryDrawing Brush="#FFF9FAFB"
+                                                             Geometry="M0,0 H24 V24 H0 Z"/>
+                                            <GeometryDrawing>
+                                                <GeometryDrawing.Pen>
+                                                    <Pen Brush="#0D334155" Thickness="1"/>
+                                                </GeometryDrawing.Pen>
+                                                <GeometryDrawing.Geometry>
+                                                    <GeometryGroup>
+                                                        <LineGeometry StartPoint="24,0" EndPoint="24,24"/>
+                                                        <LineGeometry StartPoint="0,24" EndPoint="24,24"/>
+                                                    </GeometryGroup>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                            <GeometryDrawing>
+                                                <GeometryDrawing.Brush>
+                                                    <SolidColorBrush Color="#12334155"/>
+                                                </GeometryDrawing.Brush>
+                                                <GeometryDrawing.Geometry>
+                                                    <EllipseGeometry Center="24,24" RadiusX="1.25" RadiusY="1.25"/>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                        </DrawingGroup>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Border.Background>
+                        </Border>
 
-                <Grid x:Name="RootGrid"
-                      Margin="12"
-                      ClipToBounds="True"
-                      Background="Transparent"
-                      PreviewMouseLeftButtonDown="RootGrid_OnMouseLeftButtonDown"
-                      PreviewMouseRightButtonDown="RootGrid_OnPreviewMouseRightButtonDown"
-                      ContextMenuOpening="RootGrid_OnContextMenuOpening"
-                      MouseMove="RootGrid_OnMouseMove"
-                      MouseLeftButtonUp="RootGrid_OnMouseLeftButtonUp">
-                    <Grid.ContextMenu>
-                        <ContextMenu x:Name="CanvasContextMenu">
-                            <MenuItem x:Name="CopyMenuItem" Header="Copy" Click="CopySelected_OnClick"/>
-                            <MenuItem x:Name="PasteMenuItem" Header="Paste" Click="PasteClipboard_OnClick"/>
-                            <MenuItem x:Name="DuplicateMenuItem" Header="Duplicate" Click="DuplicateSelected_OnClick"/>
-                            <MenuItem x:Name="DeleteMenuItem" Header="Delete" Click="DeleteSelected_OnClick"/>
-                            <Separator/>
-                            <MenuItem x:Name="GroupSelectedMenuItem" Header="Group Selected" Click="GroupSelected_OnClick"/>
-                            <MenuItem x:Name="UngroupSelectedMenuItem" Header="Ungroup Selected" Click="UngroupSelected_OnClick"/>
-                            <Separator/>
-                            <MenuItem x:Name="LockSelectedMenuItem" Header="Lock Selected" Click="LockSelected_OnClick"/>
-                            <MenuItem x:Name="UnlockSelectedMenuItem" Header="Unlock Selected" Click="UnlockSelected_OnClick"/>
-                            <Separator/>
-                            <MenuItem x:Name="BringForwardMenuItem" Header="Bring Forward" Click="BringForward_OnClick"/>
-                            <MenuItem x:Name="SendBackwardMenuItem" Header="Send Backward" Click="SendBackward_OnClick"/>
-                            <MenuItem x:Name="BringToFrontMenuItem" Header="Bring To Front" Click="BringToFront_OnClick"/>
-                            <MenuItem x:Name="SendToBackMenuItem" Header="Send To Back" Click="SendToBack_OnClick"/>
-                        </ContextMenu>
-                    </Grid.ContextMenu>
-                </Grid>
+                        <Grid x:Name="RootGrid"
+                              Width="1920"
+                              Height="1080"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Top"
+                              ClipToBounds="True"
+                              Background="Transparent"
+                              PreviewMouseLeftButtonDown="RootGrid_OnMouseLeftButtonDown"
+                              PreviewMouseRightButtonDown="RootGrid_OnPreviewMouseRightButtonDown"
+                              ContextMenuOpening="RootGrid_OnContextMenuOpening"
+                              MouseMove="RootGrid_OnMouseMove"
+                              MouseLeftButtonUp="RootGrid_OnMouseLeftButtonUp">
+                            <Grid.ContextMenu>
+                                <ContextMenu x:Name="CanvasContextMenu">
+                                    <MenuItem x:Name="CopyMenuItem" Header="Copy" Click="CopySelected_OnClick"/>
+                                    <MenuItem x:Name="PasteMenuItem" Header="Paste" Click="PasteClipboard_OnClick"/>
+                                    <MenuItem x:Name="DuplicateMenuItem" Header="Duplicate" Click="DuplicateSelected_OnClick"/>
+                                    <MenuItem x:Name="DeleteMenuItem" Header="Delete" Click="DeleteSelected_OnClick"/>
+                                    <Separator/>
+                                    <MenuItem x:Name="GroupSelectedMenuItem" Header="Group Selected" Click="GroupSelected_OnClick"/>
+                                    <MenuItem x:Name="UngroupSelectedMenuItem" Header="Ungroup Selected" Click="UngroupSelected_OnClick"/>
+                                    <Separator/>
+                                    <MenuItem x:Name="LockSelectedMenuItem" Header="Lock Selected" Click="LockSelected_OnClick"/>
+                                    <MenuItem x:Name="UnlockSelectedMenuItem" Header="Unlock Selected" Click="UnlockSelected_OnClick"/>
+                                    <Separator/>
+                                    <MenuItem x:Name="BringForwardMenuItem" Header="Bring Forward" Click="BringForward_OnClick"/>
+                                    <MenuItem x:Name="SendBackwardMenuItem" Header="Send Backward" Click="SendBackward_OnClick"/>
+                                    <MenuItem x:Name="BringToFrontMenuItem" Header="Bring To Front" Click="BringToFront_OnClick"/>
+                                    <MenuItem x:Name="SendToBackMenuItem" Header="Send To Back" Click="SendToBack_OnClick"/>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+                        </Grid>
 
-                <Border x:Name="SelectionMarquee"
-                        BorderBrush="#FF60A5FA"
-                        BorderThickness="2"
-                        Background="#2260A5FA"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-                        Visibility="Collapsed"
-                        IsHitTestVisible="False"/>
+                        <Border x:Name="SelectionMarquee"
+                                BorderBrush="#FF60A5FA"
+                                BorderThickness="2"
+                                Background="#2260A5FA"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"/>
 
-                <Border x:Name="VerticalGuide"
-                        Width="1"
-                        Background="#FF60A5FA"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Stretch"
-                        Visibility="Collapsed"
-                        IsHitTestVisible="False"/>
+                        <Border x:Name="VerticalGuide"
+                                Width="1"
+                                Background="#FF60A5FA"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Stretch"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"/>
 
-                <Border x:Name="HorizontalGuide"
-                        Height="1"
-                        Background="#FF60A5FA"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Top"
-                        Visibility="Collapsed"
-                        IsHitTestVisible="False"/>
+                        <Border x:Name="HorizontalGuide"
+                                Height="1"
+                                Background="#FF60A5FA"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Top"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"/>
+                    </Grid>
+                </ScrollViewer>
             </Grid>
 
             <Border Grid.Column="1"
@@ -275,195 +466,192 @@
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel x:Name="CommonCornerSettingsPanel"
-                                        Margin="0,12,0,0"
-                                        Visibility="Collapsed">
-                                <Border Background="#FFFFFFFF"
-                                        BorderBrush="#FFE5E7EB"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Visual"
-                                                   Foreground="#FF1F2937"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,4,0,8"
-                                                   Foreground="#FF6B7280"
-                                                   FontSize="11"
-                                                   Text="Shared style values applied to widgets that expose generic visual settings."/>
+                            <Border x:Name="CommonCornerSettingsPanel"
+                                    Margin="0,12,0,0"
+                                    Background="#FFFFFFFF"
+                                    BorderBrush="#FFE5E7EB"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12"
+                                    Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Visual"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,4,0,8"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="Shared style values applied to widgets that expose generic visual settings."/>
 
-                                        <TextBlock Text="Widget corners"
-                                                   Foreground="#FF1F2937"
-                                                   FontWeight="SemiBold"/>
+                                    <TextBlock Text="Widget corners"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
 
-                                        <UniformGrid Columns="2" Margin="0,8,0,0">
-                                            <StackPanel Margin="0,0,6,0">
-                                                <TextBlock Text="Top-left radius" Foreground="#FF6B7280"/>
-                                                <TextBox x:Name="CommonCornerTopLeftTextBox" Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                            <StackPanel Margin="6,0,0,0">
-                                                <TextBlock Text="Top-right radius" Foreground="#FF6B7280"/>
-                                                <TextBox x:Name="CommonCornerTopRightTextBox" Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                        </UniformGrid>
+                                    <UniformGrid Columns="2" Margin="0,8,0,0">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="Top-left radius" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="CommonCornerTopLeftTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="6,0,0,0">
+                                            <TextBlock Text="Top-right radius" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="CommonCornerTopRightTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </UniformGrid>
 
-                                        <UniformGrid Columns="2" Margin="0,8,0,0">
-                                            <StackPanel Margin="0,0,6,0">
-                                                <TextBlock Text="Bottom-right radius" Foreground="#FF6B7280"/>
-                                                <TextBox x:Name="CommonCornerBottomRightTextBox" Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                            <StackPanel Margin="6,0,0,0">
-                                                <TextBlock Text="Bottom-left radius" Foreground="#FF6B7280"/>
-                                                <TextBox x:Name="CommonCornerBottomLeftTextBox" Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                        </UniformGrid>
+                                    <UniformGrid Columns="2" Margin="0,8,0,0">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="Bottom-right radius" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="CommonCornerBottomRightTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="6,0,0,0">
+                                            <TextBlock Text="Bottom-left radius" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="CommonCornerBottomLeftTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </UniformGrid>
 
-                                        <TextBlock Margin="0,8,0,0"
-                                                   Foreground="#FF6B7280"
-                                                   FontSize="11"
-                                                   Text="Corner radii are applied to the selected widget. Default is 0 so widgets can glue together without gaps."/>
+                                    <TextBlock Margin="0,8,0,0"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="Corner radii are applied to the selected widget. Default is 0 so widgets can glue together without gaps."/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="ShiftLedSettingsPanel"
+                                    Margin="0,12,0,0"
+                                    Background="#FFFFFFFF"
+                                    BorderBrush="#FFE5E7EB"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12"
+                                    Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Widget settings"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,4,0,8"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="These options belong specifically to the selected LED Shift Panel widget."/>
+
+                                    <TextBlock Text="LED Shift Panel"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+
+                                    <UniformGrid Columns="2" Margin="0,8,0,0">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="LED count" Foreground="#FF6B7280"/>
+                                            <TextBox x:Name="ShiftLedCountTextBox" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="6,20,0,0">
+                                            <CheckBox x:Name="ShiftUsePerLedColorsCheckBox"
+                                                      Content="Use per-LED colors"
+                                                      Foreground="#FF1F2937"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+
+                                    <CheckBox x:Name="ShiftShowBackgroundCheckBox"
+                                              Margin="0,8,0,0"
+                                              Content="Show background"
+                                              Foreground="#FF1F2937"/>
+
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Background color" Foreground="#FF6B7280"/>
+                                        <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                            <Button Content="Pick"
+                                                    Width="44"
+                                                    Margin="8,0,0,0"
+                                                    DockPanel.Dock="Right"
+                                                    Click="PickShiftBackgroundColor_OnClick"/>
+                                            <TextBox x:Name="ShiftBackgroundColorTextBox"/>
+                                        </DockPanel>
                                     </StackPanel>
-                                </Border>
-                            </StackPanel>
 
-                            <StackPanel x:Name="ShiftLedSettingsPanel"
-                                        Margin="0,12,0,0"
-                                        Visibility="Collapsed">
-                                <Border Background="#FFFFFFFF"
-                                        BorderBrush="#FFE5E7EB"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Widget settings"
-                                                   Foreground="#FF1F2937"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,4,0,8"
-                                                   Foreground="#FF6B7280"
-                                                   FontSize="11"
-                                                   Text="These options belong specifically to the selected LED Shift Panel widget."/>
-
-                                        <TextBlock Text="LED Shift Panel"
-                                                   Foreground="#FF1F2937"
-                                                   FontWeight="SemiBold"/>
-
-                                        <UniformGrid Columns="2" Margin="0,8,0,0">
-                                            <StackPanel Margin="0,0,6,0">
-                                                <TextBlock Text="LED count" Foreground="#FF6B7280"/>
-                                                <TextBox x:Name="ShiftLedCountTextBox" Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                            <StackPanel Margin="6,20,0,0">
-                                                <CheckBox x:Name="ShiftUsePerLedColorsCheckBox"
-                                                          Content="Use per-LED colors"
-                                                          Foreground="#FF1F2937"/>
-                                            </StackPanel>
-                                        </UniformGrid>
-
-                                        <CheckBox x:Name="ShiftShowBackgroundCheckBox"
-                                                  Margin="0,8,0,0"
-                                                  Content="Show background"
-                                                  Foreground="#FF1F2937"/>
-
-                                        <StackPanel Margin="0,8,0,0">
-                                            <TextBlock Text="Background color" Foreground="#FF6B7280"/>
-                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                                <Button Content="Pick"
-                                                        Width="44"
-                                                        Margin="8,0,0,0"
-                                                        DockPanel.Dock="Right"
-                                                        Click="PickShiftBackgroundColor_OnClick"/>
-                                                <TextBox x:Name="ShiftBackgroundColorTextBox"/>
-                                            </DockPanel>
-                                        </StackPanel>
-
-                                        <StackPanel Margin="0,8,0,0">
-                                            <TextBlock Text="LED off color" Foreground="#FF6B7280"/>
-                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                                <Button Content="Pick"
-                                                        Width="44"
-                                                        Margin="8,0,0,0"
-                                                        DockPanel.Dock="Right"
-                                                        Click="PickShiftOffColor_OnClick"/>
-                                                <TextBox x:Name="ShiftOffColorTextBox"/>
-                                            </DockPanel>
-                                        </StackPanel>
-
-                                        <StackPanel Margin="0,8,0,0">
-                                            <TextBlock Text="Fallback LED on color" Foreground="#FF6B7280"/>
-                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                                <Button Content="Pick"
-                                                        Width="44"
-                                                        Margin="8,0,0,0"
-                                                        DockPanel.Dock="Right"
-                                                        Click="PickShiftOnColor_OnClick"/>
-                                                <TextBox x:Name="ShiftOnColorTextBox"/>
-                                            </DockPanel>
-                                        </StackPanel>
-
-                                        <StackPanel Margin="0,8,0,0">
-                                            <TextBlock Text="Per-LED colors" Foreground="#FF6B7280"/>
-                                            <TextBox x:Name="ShiftOnColorsTextBox"
-                                                     Margin="0,4,0,0"
-                                                     AcceptsReturn="True"
-                                                     TextWrapping="Wrap"
-                                                     MinHeight="74"
-                                                     VerticalScrollBarVisibility="Auto"/>
-                                        </StackPanel>
-
-                                        <TextBlock Margin="0,8,0,0"
-                                                   Foreground="#FF6B7280"
-                                                   FontSize="11"
-                                                   Text="Use WPF color values like #20262E or #E6111827. Per-LED colors can be comma, semicolon or line separated. Turn off per-LED colors to use one shared on-color for all lamps."/>
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="LED off color" Foreground="#FF6B7280"/>
+                                        <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                            <Button Content="Pick"
+                                                    Width="44"
+                                                    Margin="8,0,0,0"
+                                                    DockPanel.Dock="Right"
+                                                    Click="PickShiftOffColor_OnClick"/>
+                                            <TextBox x:Name="ShiftOffColorTextBox"/>
+                                        </DockPanel>
                                     </StackPanel>
-                                </Border>
-                            </StackPanel>
 
-                            <StackPanel x:Name="DecorativePanelSettingsPanel"
-                                        Margin="0,12,0,0"
-                                        Visibility="Collapsed">
-                                <Border Background="#FFFFFFFF"
-                                        BorderBrush="#FFE5E7EB"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="12">
-                                    <StackPanel>
-                                        <TextBlock Text="Widget settings"
-                                                   Foreground="#FF1F2937"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,4,0,8"
-                                                   Foreground="#FF6B7280"
-                                                   FontSize="11"
-                                                   Text="These options belong specifically to the selected Decorative Panel widget."/>
-
-                                        <TextBlock Text="Decorative Panel"
-                                                   Foreground="#FF1F2937"
-                                                   FontWeight="SemiBold"/>
-
-                                        <StackPanel Margin="0,8,0,0">
-                                            <TextBlock Text="Background color" Foreground="#FF6B7280"/>
-                                            <DockPanel Margin="0,4,0,0" LastChildFill="True">
-                                                <Button Content="Pick"
-                                                        Width="44"
-                                                        Margin="8,0,0,0"
-                                                        DockPanel.Dock="Right"
-                                                        Click="PickDecorativeBackgroundColor_OnClick"/>
-                                                <TextBox x:Name="DecorativeBackgroundColorTextBox"/>
-                                            </DockPanel>
-                                        </StackPanel>
-
-                                        <StackPanel Margin="0,8,0,0">
-                                            <TextBlock Text="Opacity" Foreground="#FF6B7280"/>
-                                            <TextBox x:Name="DecorativeOpacityTextBox"
-                                                     Margin="0,4,0,0"/>
-                                        </StackPanel>
-
-                                        <TextBlock Margin="0,8,0,0"
-                                                   Foreground="#FF6B7280"
-                                                   FontSize="11"
-                                                   Text="Decorative panel uses a WPF color value like #20262E or #CC1F2937. Opacity uses a value from 0 to 1."/>
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Fallback LED on color" Foreground="#FF6B7280"/>
+                                        <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                            <Button Content="Pick"
+                                                    Width="44"
+                                                    Margin="8,0,0,0"
+                                                    DockPanel.Dock="Right"
+                                                    Click="PickShiftOnColor_OnClick"/>
+                                            <TextBox x:Name="ShiftOnColorTextBox"/>
+                                        </DockPanel>
                                     </StackPanel>
-                                </Border>
-                            </StackPanel>
+
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Per-LED colors" Foreground="#FF6B7280"/>
+                                        <TextBox x:Name="ShiftOnColorsTextBox"
+                                                 Margin="0,4,0,0"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="Wrap"
+                                                 MinHeight="74"
+                                                 VerticalScrollBarVisibility="Auto"/>
+                                    </StackPanel>
+
+                                    <TextBlock Margin="0,8,0,0"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="Use WPF color values like #20262E or #E6111827. Per-LED colors can be comma, semicolon or line separated. Turn off per-LED colors to use one shared on-color for all lamps."/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="DecorativePanelSettingsPanel"
+                                    Margin="0,12,0,0"
+                                    Background="#FFFFFFFF"
+                                    BorderBrush="#FFE5E7EB"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12"
+                                    Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Widget settings"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,4,0,8"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="These options belong specifically to the selected Decorative Panel widget."/>
+
+                                    <TextBlock Text="Decorative Panel"
+                                               Foreground="#FF1F2937"
+                                               FontWeight="SemiBold"/>
+
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Background color" Foreground="#FF6B7280"/>
+                                        <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                                            <Button Content="Pick"
+                                                    Width="44"
+                                                    Margin="8,0,0,0"
+                                                    DockPanel.Dock="Right"
+                                                    Click="PickDecorativeBackgroundColor_OnClick"/>
+                                            <TextBox x:Name="DecorativeBackgroundColorTextBox"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Opacity" Foreground="#FF6B7280"/>
+                                        <TextBox x:Name="DecorativeOpacityTextBox"
+                                                 Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <TextBlock Margin="0,8,0,0"
+                                               Foreground="#FF6B7280"
+                                               FontSize="11"
+                                               Text="Decorative panel uses a WPF color value like #20262E or #CC1F2937. Opacity uses a value from 0 to 1."/>
+                                </StackPanel>
+                            </Border>
 
                             <Button Content="Apply"
                                     Margin="0,12,0,0"
@@ -475,5 +663,4 @@
             </Border>
         </Grid>
     </DockPanel>
-
 </Window>

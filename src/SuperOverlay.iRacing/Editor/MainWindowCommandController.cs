@@ -1,7 +1,17 @@
+using System.IO;
+using System.Windows;
+using WpfWindow = System.Windows.Window;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using System.Windows.Input;
+using WpfMessageBox = System.Windows.MessageBox;
+using WpfMessageBoxButton = System.Windows.MessageBoxButton;
+using WpfMessageBoxImage = System.Windows.MessageBoxImage;
+using WpfMessageBoxResult = System.Windows.MessageBoxResult;
+using WpfSaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using WpfOpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.iRacing.Hosting;
+using SuperOverlay.LayoutBuilder.Panels;
 
 namespace SuperOverlay.iRacing.Editor;
 
@@ -17,6 +27,8 @@ public sealed class MainWindowCommandController
     private readonly Action _refreshCatalog;
     private readonly Action _refreshProperties;
     private readonly Action _hideSelectionMarquee;
+    private readonly PanelPresetLibrary _panelPresetLibrary = new();
+    private readonly PanelLayoutLibrary _panelLayoutLibrary = new();
 
     public MainWindowCommandController(
         Func<OverlayRuntimeSession?> getSession,
@@ -58,6 +70,116 @@ public sealed class MainWindowCommandController
         _refreshProperties();
         _guidePresenter.Hide();
         _hideSelectionMarquee();
+    }
+
+    public bool NewPanelLayout(WpfWindow owner)
+    {
+        var session = _getSession();
+        if (session is null)
+        {
+            return false;
+        }
+
+        if (session.GetLayoutItems().Count > 0)
+        {
+            var result = WpfMessageBox.Show(
+                owner,
+                "New Panel Layout will replace the current builder canvas in memory until you reload the flat layout. Continue?",
+                "New Panel Layout",
+                WpfMessageBoxButton.YesNo,
+                WpfMessageBoxImage.Warning);
+
+            if (result != WpfMessageBoxResult.Yes)
+            {
+                return false;
+            }
+        }
+
+        var layoutName = $"Panel Layout {DateTime.Now:yyyy-MM-dd HHmm}";
+        if (!session.StartNewPanelLayout(layoutName))
+        {
+            return false;
+        }
+
+        _refreshProperties();
+        _guidePresenter.Hide();
+        _hideSelectionMarquee();
+        return true;
+    }
+
+    public bool OpenPanelLayout(WpfWindow owner)
+    {
+        var session = _getSession();
+        if (session is null)
+        {
+            return false;
+        }
+
+        var directory = _panelLayoutLibrary.GetDefaultDirectory(session.GetLayoutPath());
+        Directory.CreateDirectory(directory);
+
+        var dialog = new WpfOpenFileDialog
+        {
+            Title = "Open Panel Layout",
+            InitialDirectory = directory,
+            Filter = "Panel Layout (*.panel-layout.json)|*.panel-layout.json|JSON (*.json)|*.json|All files (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog(owner) != true || string.IsNullOrWhiteSpace(dialog.FileName))
+        {
+            return false;
+        }
+
+        if (!session.OpenPanelLayout(dialog.FileName))
+        {
+            return false;
+        }
+
+        _refreshProperties();
+        _guidePresenter.Hide();
+        _hideSelectionMarquee();
+        return true;
+    }
+
+    public bool SavePanelLayout(WpfWindow owner)
+    {
+        var session = _getSession();
+        if (session is null || !session.HasPanelLayout)
+        {
+            return false;
+        }
+
+        var currentPath = session.GetPanelLayoutPath();
+        var targetPath = currentPath;
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            var directory = _panelLayoutLibrary.GetDefaultDirectory(session.GetLayoutPath());
+            Directory.CreateDirectory(directory);
+            var documentName = session.GetLayoutItems().Count > 0 ? "panel-layout" : "panel-layout";
+
+            var dialog = new WpfSaveFileDialog
+            {
+                Title = "Save Panel Layout",
+                InitialDirectory = directory,
+                FileName = documentName,
+                DefaultExt = ".panel-layout.json",
+                Filter = "Panel Layout (*.panel-layout.json)|*.panel-layout.json|JSON (*.json)|*.json"
+            };
+
+            if (dialog.ShowDialog(owner) != true || string.IsNullOrWhiteSpace(dialog.FileName))
+            {
+                return false;
+            }
+
+            targetPath = dialog.FileName;
+        }
+
+        if (!session.SavePanelLayout(targetPath))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     public bool AddSelectedCatalogItem(DashboardCatalogItem? item)
@@ -134,6 +256,129 @@ public sealed class MainWindowCommandController
         _refreshProperties();
         _saveCoordinator.QueueSave();
         _guidePresenter.Show(result);
+    }
+
+    public bool SaveSelectionAsPanelPreset(WpfWindow owner)
+    {
+        var session = _getSession();
+        if (session is null || !session.HasSelection)
+        {
+            return false;
+        }
+
+        var suggestedName = session.GetSelectedItemProperties()?.DisplayName?.Trim();
+        if (string.IsNullOrWhiteSpace(suggestedName))
+        {
+            suggestedName = $"Panel-{DateTime.Now:yyyyMMdd-HHmmss}";
+        }
+
+        var layoutPath = session.GetLayoutPath();
+        var presetDirectory = _panelPresetLibrary.GetDefaultDirectory(layoutPath);
+        Directory.CreateDirectory(presetDirectory);
+
+        var saveWindow = new PanelPresetSaveWindow(_panelPresetLibrary, presetDirectory, suggestedName)
+        {
+            Owner = owner
+        };
+
+        if (saveWindow.ShowDialog() != true || string.IsNullOrWhiteSpace(saveWindow.SelectedPath))
+        {
+            return false;
+        }
+
+        var preset = session.CreateSelectedPanelPreset(saveWindow.PresetName, saveWindow.PresetCategory);
+        if (preset is null)
+        {
+            return false;
+        }
+
+        _panelPresetLibrary.Save(saveWindow.SelectedPath, preset);
+        return true;
+    }
+
+    public bool InsertPanelPreset(WpfWindow owner)
+    {
+        var session = _getSession();
+        if (session is null)
+        {
+            return false;
+        }
+
+        var presetDirectory = _panelPresetLibrary.GetDefaultDirectory(session.GetLayoutPath());
+        Directory.CreateDirectory(presetDirectory);
+
+        var browser = new PanelPresetBrowserWindow(_panelPresetLibrary, presetDirectory)
+        {
+            Owner = owner
+        };
+
+        if (browser.ShowDialog() != true || browser.SelectedAction != PanelPresetBrowserAction.Insert || string.IsNullOrWhiteSpace(browser.SelectedPresetPath))
+        {
+            return false;
+        }
+
+        var preset = _panelPresetLibrary.Load(browser.SelectedPresetPath);
+        var inserted = session.HasPanelLayout
+            ? session.InsertPanelPresetAsPanelInstance(preset, 40, 40)
+            : session.InsertPanelPreset(preset, 40, 40);
+
+        if (!inserted)
+        {
+            return false;
+        }
+
+        _refreshProperties();
+        _saveCoordinator.QueueSave();
+        return true;
+    }
+
+
+    public bool OpenPanelPresetForEditing(WpfWindow owner)
+    {
+        var session = _getSession();
+        if (session is null)
+        {
+            return false;
+        }
+
+        var presetDirectory = _panelPresetLibrary.GetDefaultDirectory(session.GetLayoutPath());
+        Directory.CreateDirectory(presetDirectory);
+
+        var browser = new PanelPresetBrowserWindow(_panelPresetLibrary, presetDirectory)
+        {
+            Owner = owner
+        };
+
+        if (browser.ShowDialog() != true ||
+            browser.SelectedAction != PanelPresetBrowserAction.OpenForEdit ||
+            string.IsNullOrWhiteSpace(browser.SelectedPresetPath))
+        {
+            return false;
+        }
+
+        if (session.GetLayoutItems().Count > 0)
+        {
+            var result = WpfMessageBox.Show(
+                owner,
+                "Open Panel will replace the current builder canvas in memory until you reload the layout. Continue?",
+                "Open Panel Preset",
+                WpfMessageBoxButton.YesNo,
+                WpfMessageBoxImage.Warning);
+
+            if (result != WpfMessageBoxResult.Yes)
+            {
+                return false;
+            }
+        }
+
+        var preset = _panelPresetLibrary.Load(browser.SelectedPresetPath);
+        if (!session.OpenPanelPresetForEditing(preset, 40, 40))
+        {
+            return false;
+        }
+
+        _refreshProperties();
+        return true;
     }
 
     public bool HandleKeyDown(WpfKeyEventArgs e)

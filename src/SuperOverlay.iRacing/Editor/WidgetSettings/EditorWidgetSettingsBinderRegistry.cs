@@ -1,6 +1,6 @@
 namespace SuperOverlay.iRacing.Editor.WidgetSettings;
 
-internal sealed class EditorWidgetSettingsBinderRegistry
+public sealed class EditorWidgetSettingsBinderRegistry
 {
     private readonly IReadOnlyList<IEditorWidgetSettingsBinder> _binders;
 

@@ -5,7 +5,7 @@ using System.Windows.Threading;
 using SuperOverlay.LayoutBuilder.Runtime;
 using SuperOverlay.iRacing.Hosting;
 using SuperOverlay.iRacing.Mapping;
-using SuperOverlay.iRacing.Telemetry.Mock;
+using SuperOverlay.iRacing.Telemetry.IRacing;
 
 namespace SuperOverlay.iRacing.Runtime;
 
@@ -15,7 +15,7 @@ internal sealed class RuntimeWindowController
     private readonly Grid _rootGrid;
     private readonly Border _runtimeHintBorder;
     private readonly Border _editOverlayBar;
-    private readonly MockTelemetryProvider _telemetry;
+    private readonly IRacingTelemetryProvider _telemetry;
     private readonly IRacingMapper _mapper;
     private readonly OverlayRuntimeBootstrapper _bootstrapper;
 
@@ -28,7 +28,7 @@ internal sealed class RuntimeWindowController
         Grid rootGrid,
         Border runtimeHintBorder,
         Border editOverlayBar,
-        MockTelemetryProvider telemetry,
+        IRacingTelemetryProvider telemetry,
         IRacingMapper mapper,
         OverlayRuntimeBootstrapper bootstrapper)
     {
@@ -48,6 +48,7 @@ internal sealed class RuntimeWindowController
     {
         ConfigureWindowBounds();
         BuildSession(OverlayShellMode.Runtime);
+        _telemetry.Start();
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _timer.Tick += OnTick;
         _timer.Start();
@@ -99,6 +100,7 @@ internal sealed class RuntimeWindowController
     public void Stop()
     {
         _timer?.Stop();
+        _telemetry.Stop();
     }
 
     private void BuildSession(OverlayShellMode shellMode)
@@ -119,7 +121,7 @@ internal sealed class RuntimeWindowController
             return;
         }
 
-        var (speed, rpm, gear, shiftLightPercent) = _telemetry.Get();
-        _session.Update(_mapper.Map(speed, rpm, gear, shiftLightPercent));
+        _telemetry.TryGetLatestSnapshot(out var snapshot);
+        _session.Update(_mapper.Map(snapshot));
     }
 }

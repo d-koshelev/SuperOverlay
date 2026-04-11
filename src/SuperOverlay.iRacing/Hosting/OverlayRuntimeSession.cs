@@ -1,3 +1,4 @@
+using System.Windows;
 using SuperOverlay.Dashboards.Items.DecorativePanel;
 using SuperOverlay.Dashboards.Items.Gear;
 using SuperOverlay.Dashboards.Items.ShiftLeds;
@@ -5,6 +6,8 @@ using SuperOverlay.Dashboards.Items.Speed;
 using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.LayoutBuilder.Layout;
 using SuperOverlay.LayoutBuilder.Persistence;
+using SuperOverlay.LayoutBuilder.Panels;
+using SuperOverlay.LayoutBuilder.PanelLayouts;
 using SuperOverlay.LayoutBuilder.Runtime;
 
 namespace SuperOverlay.iRacing.Hosting;
@@ -19,8 +22,13 @@ public sealed class OverlayRuntimeSession
     private readonly LayoutSnapService _snapService = new();
     private readonly string _layoutPath;
     private readonly OverlayShellMode _shellMode;
+    private readonly PanelLayoutCompiler _panelLayoutCompiler = new();
+    private readonly PanelPresetLibrary _panelPresetLibrary = new();
 
     private LayoutDocument _layout;
+    private PanelLayoutDocument? _panelLayout;
+    private string? _panelLayoutPath;
+    private IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> _compiledPanelItemMap = new Dictionary<Guid, IReadOnlyList<Guid>>();
     private Guid? _selectedItemId;
     private HashSet<Guid> _selectedItemIds = new();
     private bool _snappingEnabled = true;
@@ -57,11 +65,86 @@ public sealed class OverlayRuntimeSession
     public bool HasSelection => _selectedItemIds.Count > 0;
     public bool CanPaste => _clipboardLayout is not null && _clipboardItemIds.Count > 0;
     public bool HasLockedSelection => _selectedItemIds.Any(id => _layout.Items.Any(x => x.Id == id && x.IsLocked));
+    public bool HasPanelLayout => _panelLayout is not null;
+    public string? GetPanelLayoutPath() => _panelLayoutPath;
+
+    public LayoutCanvas GetCanvas() => _layout.Canvas;
+    public bool UpdateCanvasSize(double width, double height)
+    {
+        width = Math.Round(width);
+        height = Math.Round(height);
+
+        if (width < 320 || height < 180)
+        {
+            return false;
+        }
+
+        var canvas = new LayoutCanvas(width, height);
+        var changed = false;
+
+        if (_panelLayout is not null)
+        {
+            if (_panelLayout.Canvas.Width != canvas.Width || _panelLayout.Canvas.Height != canvas.Height)
+            {
+                _panelLayout = _panelLayout with { Canvas = canvas };
+                changed = true;
+            }
+        }
+
+        if (_layout.Canvas.Width != canvas.Width || _layout.Canvas.Height != canvas.Height)
+        {
+            _layout = _layout with { Canvas = canvas };
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            return true;
+        }
+
+        RefreshRuntime();
+        return true;
+    }
+
+
+    public bool HasPanelSelection => _panelLayout is not null && GetSelectedPanelIds().Count > 0;
+
 
     public IReadOnlyList<DashboardCatalogItem> GetCatalog() => _registry.GetCatalog().OrderBy(x => x.DisplayName).ToList();
 
     public LayoutSelectedItemProperties? GetSelectedItemProperties()
     {
+        if (_panelLayout is not null)
+        {
+            var selectedPanels = GetSelectedPanels();
+            if (selectedPanels.Count == 0)
+            {
+                return null;
+            }
+
+            var primaryPanel = ResolveSelectedPanel(_selectedItemId) ?? selectedPanels[0];
+            var compiledItemIds = _compiledPanelItemMap.TryGetValue(primaryPanel.Id, out var itemIds) ? itemIds : Array.Empty<Guid>();
+            var placements = _layout.Placements.Where(x => compiledItemIds.Contains(x.ItemId)).ToList();
+            if (placements.Count == 0)
+            {
+                return null;
+            }
+
+            var bounds = GetBounds(placements);
+            return new LayoutSelectedItemProperties(
+                primaryPanel.Id,
+                "panel.instance",
+                primaryPanel.PanelName,
+                primaryPanel.X,
+                primaryPanel.Y,
+                bounds.Width,
+                bounds.Height,
+                primaryPanel.ZIndex,
+                primaryPanel.IsLocked,
+                selectedPanels.Count,
+                true);
+        }
+
         if (_selectedItemId is null)
         {
             return null;
@@ -93,6 +176,11 @@ public sealed class OverlayRuntimeSession
 
     public WidgetCornerSettings? GetSelectedWidgetCornerSettings()
     {
+        if (_panelLayout is not null)
+        {
+            return null;
+        }
+
         if (_selectedItemId is null)
         {
             return null;
@@ -124,6 +212,11 @@ public sealed class OverlayRuntimeSession
 
     public bool UpdateSelectedWidgetCornerSettings(double topLeft, double topRight, double bottomRight, double bottomLeft)
     {
+        if (_panelLayout is not null)
+        {
+            return false;
+        }
+
         if (_selectedItemId is null)
         {
             return false;
@@ -194,6 +287,11 @@ public sealed class OverlayRuntimeSession
 
     public ShiftLedDashboardSettings? GetSelectedShiftLedSettings()
     {
+        if (_panelLayout is not null)
+        {
+            return null;
+        }
+
         if (_selectedItemId is null)
         {
             return null;
@@ -210,6 +308,11 @@ public sealed class OverlayRuntimeSession
 
     public bool UpdateSelectedShiftLedSettings(ShiftLedDashboardSettings settings)
     {
+        if (_panelLayout is not null)
+        {
+            return false;
+        }
+
         if (_selectedItemId is null)
         {
             return false;
@@ -234,6 +337,11 @@ public sealed class OverlayRuntimeSession
 
     public DecorativePanelDashboardSettings? GetSelectedDecorativePanelSettings()
     {
+        if (_panelLayout is not null)
+        {
+            return null;
+        }
+
         if (_selectedItemId is null)
         {
             return null;
@@ -250,6 +358,11 @@ public sealed class OverlayRuntimeSession
 
     public bool UpdateSelectedDecorativePanelSettings(DecorativePanelDashboardSettings settings)
     {
+        if (_panelLayout is not null)
+        {
+            return false;
+        }
+
         if (_selectedItemId is null)
         {
             return false;
@@ -274,6 +387,36 @@ public sealed class OverlayRuntimeSession
 
     public bool UpdateSelectedItemProperties(double x, double y, double width, double height, int zIndex, bool isLocked)
     {
+        if (_panelLayout is not null)
+        {
+            var selectedPanelIds = GetSelectedPanelIds();
+            if (selectedPanelIds.Count == 0)
+            {
+                return false;
+            }
+
+            var primaryPanel = ResolveSelectedPanel(_selectedItemId);
+            var updatedPanels = _panelLayout.Panels
+                .Select(panel =>
+                {
+                    if (!selectedPanelIds.Contains(panel.Id))
+                    {
+                        return panel;
+                    }
+
+                    if (primaryPanel is not null && panel.Id == primaryPanel.Id)
+                    {
+                        return panel with { X = x, Y = y, ZIndex = zIndex, IsLocked = isLocked };
+                    }
+
+                    return panel with { IsLocked = isLocked };
+                })
+                .ToList();
+
+            _panelLayout = _panelLayout with { Panels = updatedPanels };
+            return RecompilePanelLayout(selectLastPanel: false, preserveSelection: true);
+        }
+
         if (_selectedItemId is null)
         {
             return false;
@@ -423,6 +566,12 @@ public sealed class OverlayRuntimeSession
 
     private IReadOnlyCollection<Guid> GetSelectionUnitItemIds(Guid itemId)
     {
+        var panelItems = GetCompiledPanelItemIds(itemId);
+        if (panelItems.Count > 0)
+        {
+            return panelItems;
+        }
+
         var linked = GetLinkedGroupItemIds(itemId);
         return linked.Count > 1 ? linked : new[] { itemId };
     }
@@ -474,6 +623,11 @@ public sealed class OverlayRuntimeSession
 
     public bool IsResizeHandleHit(object? hitSource, Guid itemId)
     {
+        if (_panelLayout is not null)
+        {
+            return false;
+        }
+
         return hitSource is not null && _layoutHost.IsResizeHandleHit(hitSource as System.Windows.DependencyObject, itemId);
     }
 
@@ -522,6 +676,24 @@ public sealed class OverlayRuntimeSession
             return false;
         }
 
+        if (_panelLayout is not null)
+        {
+            var selectedPanelIds = GetSelectedPanelIds();
+            if (selectedPanelIds.Count == 0)
+            {
+                return false;
+            }
+
+            var updatedPanels = _panelLayout.Panels.Where(x => !selectedPanelIds.Contains(x.Id)).ToList();
+            if (updatedPanels.Count == _panelLayout.Panels.Count)
+            {
+                return false;
+            }
+
+            _panelLayout = _panelLayout with { Panels = updatedPanels };
+            return RecompilePanelLayout(selectLastPanel: false, preserveSelection: false);
+        }
+
         var changed = _mutationService.DeleteItems(ref _layout, _selectedItemIds);
         if (changed)
         {
@@ -538,6 +710,30 @@ public sealed class OverlayRuntimeSession
         if (_selectedItemIds.Count == 0)
         {
             return false;
+        }
+
+        if (_panelLayout is not null)
+        {
+            var selectedPanels = GetSelectedPanels();
+            if (selectedPanels.Count == 0)
+            {
+                return false;
+            }
+
+            var nextZ = _panelLayout.Panels.Count == 0 ? 0 : _panelLayout.Panels.Max(x => x.ZIndex) + 1;
+            var duplicates = selectedPanels
+                .OrderBy(x => x.ZIndex)
+                .Select((panel, index) => panel with
+                {
+                    Id = Guid.NewGuid(),
+                    X = panel.X + 20,
+                    Y = panel.Y + 20,
+                    ZIndex = nextZ + index
+                })
+                .ToList();
+
+            _panelLayout = _panelLayout with { Panels = _panelLayout.Panels.Concat(duplicates).ToList() };
+            return RecompilePanelLayout(selectLastPanel: true, preserveSelection: false);
         }
 
         var changed = _mutationService.DuplicateItems(ref _layout, _selectedItemIds, out var newItemIds);
@@ -810,11 +1006,148 @@ public sealed class OverlayRuntimeSession
         return new LayoutMoveResult(changed, snapX, snapY);
     }
 
+
+    public string GetLayoutPath() => _layoutPath;
+
+    public PanelPresetDocument? CreateSelectedPanelPreset(string name, string category = "Custom")
+    {
+        if (_selectedItemIds.Count == 0)
+        {
+            return null;
+        }
+
+        var composer = new PanelPresetComposer();
+        return composer.CreateFromLayoutSelection(_layout, _selectedItemIds, name, category);
+    }
+
+    public bool InsertPanelPreset(PanelPresetDocument preset, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+
+        var composer = new PanelPresetComposer();
+        var updated = composer.InsertIntoLayout(_layout, preset, x, y, out var insertedItemIds);
+        if (insertedItemIds.Count == 0)
+        {
+            return false;
+        }
+
+        _layout = updated;
+        RefreshRuntime();
+        SelectItems(insertedItemIds, insertedItemIds.LastOrDefault());
+        return true;
+    }
+
+    public bool OpenPanelPresetForEditing(PanelPresetDocument preset, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+
+        var emptyLayout = new LayoutDocument(
+            _layout.Version,
+            $"Panel - {preset.Metadata.Name}",
+            _layout.Canvas,
+            Array.Empty<LayoutItemInstance>(),
+            Array.Empty<LayoutItemPlacement>(),
+            Array.Empty<LayoutItemLink>());
+
+        var composer = new PanelPresetComposer();
+        var updated = composer.InsertIntoLayout(emptyLayout, preset, x, y, out var insertedItemIds);
+        if (insertedItemIds.Count == 0)
+        {
+            return false;
+        }
+
+        _panelLayout = null;
+        _panelLayoutPath = null;
+        _compiledPanelItemMap = new Dictionary<Guid, IReadOnlyList<Guid>>();
+        _layout = updated;
+        RefreshRuntime();
+        SelectItems(insertedItemIds, insertedItemIds.LastOrDefault());
+        return true;
+    }
+
+    public bool StartNewPanelLayout(string name = "Panel Layout")
+    {
+        var canvasWidth = Math.Max(1280, Math.Round(SystemParameters.PrimaryScreenWidth));
+        var canvasHeight = Math.Max(720, Math.Round(SystemParameters.PrimaryScreenHeight));
+
+        _panelLayout = new PanelLayoutDocument(
+            Version: _layout.Version,
+            Name: string.IsNullOrWhiteSpace(name) ? "Panel Layout" : name,
+            Canvas: new LayoutCanvas(canvasWidth, canvasHeight),
+            Panels: Array.Empty<PanelLayoutInstance>());
+        _panelLayoutPath = null;
+        return RecompilePanelLayout(selectLastPanel: false);
+    }
+
+    public bool OpenPanelLayout(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var library = new PanelLayoutLibrary();
+        var panelLayout = library.Load(path);
+        _panelLayout = panelLayout;
+        _panelLayoutPath = path;
+        return RecompilePanelLayout(selectLastPanel: false);
+    }
+
+    public bool SavePanelLayout(string path)
+    {
+        if (_panelLayout is null)
+        {
+            return false;
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        SyncPanelLayoutFromCompiledLayout();
+        var library = new PanelLayoutLibrary();
+        library.Save(path, _panelLayout);
+        _panelLayoutPath = path;
+        return true;
+    }
+
+    public bool InsertPanelPresetAsPanelInstance(PanelPresetDocument preset, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+
+        if (_panelLayout is null)
+        {
+            return false;
+        }
+
+        var nextZ = _panelLayout.Panels.Count == 0 ? 0 : _panelLayout.Panels.Max(x => x.ZIndex) + 1;
+        var panel = new PanelLayoutInstance(
+            Id: Guid.NewGuid(),
+            PanelPresetId: preset.Metadata.Id,
+            PanelName: preset.Metadata.Name,
+            Category: preset.Metadata.Category,
+            X: x,
+            Y: y,
+            ZIndex: nextZ,
+            IsLocked: false,
+            Scale: 1.0,
+            IsVisible: true);
+
+        _panelLayout = _panelLayout with { Panels = _panelLayout.Panels.Concat(new[] { panel }).ToList() };
+        return RecompilePanelLayout(selectLastPanel: true);
+    }
+
     public void EndDrag() => _snapService.EndDrag();
-    public void SaveLayout() => _fileStore.Save(_layoutPath, _layout);
+    public void SaveLayout()
+    {
+        if (_panelLayout is not null && !string.IsNullOrWhiteSpace(_panelLayoutPath))
+        {
+            SavePanelLayout(_panelLayoutPath);
+        }
+
+        _fileStore.Save(_layoutPath, _layout);
+    }
 
     public void ReloadLayout()
     {
+        _panelLayout = null;
+        _panelLayoutPath = null;
+        _compiledPanelItemMap = new Dictionary<Guid, IReadOnlyList<Guid>>();
         _layout = _fileStore.Load(_layoutPath);
         var validIds = _layout.Items.Select(x => x.Id).ToHashSet();
         _selectedItemIds.RemoveWhere(x => !validIds.Contains(x));
@@ -845,6 +1178,159 @@ public sealed class OverlayRuntimeSession
         }
 
         return changed;
+    }
+
+    private bool RecompilePanelLayout(bool selectLastPanel, bool preserveSelection = false)
+    {
+        if (_panelLayout is null)
+        {
+            return false;
+        }
+
+        var presetEntries = _panelPresetLibrary.List(_panelPresetLibrary.GetDefaultDirectory(_layoutPath))
+            .GroupBy(x => x.Id)
+            .ToDictionary(x => x.Key, x => x.Last());
+
+        _layout = _panelLayoutCompiler.Compile(
+            _panelLayout,
+            presetId => presetEntries.TryGetValue(presetId, out var entry) ? _panelPresetLibrary.Load(entry.Path) : null,
+            out var panelItemMap);
+
+        var previousSelectedPanelIds = preserveSelection ? GetSelectedPanelIds().ToHashSet() : new HashSet<Guid>();
+        _compiledPanelItemMap = panelItemMap;
+        RefreshRuntime();
+
+        if (selectLastPanel && _panelLayout.Panels.Count > 0)
+        {
+            var panelId = _panelLayout.Panels.Last().Id;
+            if (_compiledPanelItemMap.TryGetValue(panelId, out var itemIds) && itemIds.Count > 0)
+            {
+                SelectItems(itemIds, itemIds.Last());
+            }
+        }
+        else if (preserveSelection && previousSelectedPanelIds.Count > 0)
+        {
+            var itemIds = previousSelectedPanelIds
+                .Where(x => _compiledPanelItemMap.ContainsKey(x))
+                .SelectMany(x => _compiledPanelItemMap[x])
+                .ToList();
+
+            if (itemIds.Count > 0)
+            {
+                SelectItems(itemIds, itemIds.Last());
+            }
+            else
+            {
+                SelectItem(null);
+            }
+        }
+        else
+        {
+            SelectItem(null);
+        }
+
+        return true;
+    }
+
+    private IReadOnlyList<Guid> GetCompiledPanelItemIds(Guid itemId)
+    {
+        if (_panelLayout is null)
+        {
+            return Array.Empty<Guid>();
+        }
+
+        foreach (var entry in _compiledPanelItemMap)
+        {
+            if (entry.Value.Contains(itemId))
+            {
+                return entry.Value;
+            }
+        }
+
+        return Array.Empty<Guid>();
+    }
+
+    private PanelLayoutInstance? ResolveSelectedPanel(Guid? itemId)
+    {
+        if (_panelLayout is null || itemId is null)
+        {
+            return null;
+        }
+
+        foreach (var panel in _panelLayout.Panels)
+        {
+            if (_compiledPanelItemMap.TryGetValue(panel.Id, out var itemIds) && itemIds.Contains(itemId.Value))
+            {
+                return panel;
+            }
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<Guid> GetSelectedPanelIds()
+    {
+        if (_panelLayout is null || _selectedItemIds.Count == 0)
+        {
+            return Array.Empty<Guid>();
+        }
+
+        return _compiledPanelItemMap
+            .Where(x => x.Value.Any(_selectedItemIds.Contains))
+            .Select(x => x.Key)
+            .ToList();
+    }
+
+    private IReadOnlyList<PanelLayoutInstance> GetSelectedPanels()
+    {
+        if (_panelLayout is null)
+        {
+            return Array.Empty<PanelLayoutInstance>();
+        }
+
+        var selectedIds = GetSelectedPanelIds().ToHashSet();
+        if (selectedIds.Count == 0)
+        {
+            return Array.Empty<PanelLayoutInstance>();
+        }
+
+        return _panelLayout.Panels.Where(x => selectedIds.Contains(x.Id)).OrderBy(x => x.ZIndex).ToList();
+    }
+
+    private void SyncPanelLayoutFromCompiledLayout()
+    {
+        if (_panelLayout is null || _compiledPanelItemMap.Count == 0)
+        {
+            return;
+        }
+
+        var updatedPanels = new List<PanelLayoutInstance>(_panelLayout.Panels.Count);
+        foreach (var panel in _panelLayout.Panels)
+        {
+            if (!_compiledPanelItemMap.TryGetValue(panel.Id, out var itemIds) || itemIds.Count == 0)
+            {
+                updatedPanels.Add(panel);
+                continue;
+            }
+
+            var placements = _layout.Placements.Where(x => itemIds.Contains(x.ItemId)).ToList();
+            if (placements.Count == 0)
+            {
+                updatedPanels.Add(panel);
+                continue;
+            }
+
+            var items = _layout.Items.Where(x => itemIds.Contains(x.Id)).ToList();
+            updatedPanels.Add(panel with
+            {
+                X = placements.Min(x => x.X),
+                Y = placements.Min(x => x.Y),
+                ZIndex = placements.Min(x => x.ZIndex),
+                IsLocked = items.Count > 0 && items.All(x => x.IsLocked)
+            });
+        }
+
+        _panelLayout = _panelLayout with { Panels = updatedPanels };
     }
 
     private void RefreshRuntime()

@@ -1,3 +1,4 @@
+using WpfPoint = System.Windows.Point;
 using System.Windows;
 using System.Windows.Input;
 using SuperOverlay.iRacing.Hosting;
@@ -51,7 +52,7 @@ public sealed class MainWindowInteractionController
         }
     }
 
-    public bool BeginInteraction(DependencyObject? originalSource, Point canvasPoint, ModifierKeys modifiers)
+    public bool BeginInteraction(DependencyObject? originalSource, WpfPoint canvasPoint, ModifierKeys modifiers)
     {
         var session = _getSession();
         if (session is null)
@@ -76,7 +77,7 @@ public sealed class MainWindowInteractionController
         return startResult.CaptureMouse;
     }
 
-    public void MoveInteraction(Point canvasPoint, ModifierKeys modifiers, MouseButtonState leftButton)
+    public void MoveInteraction(WpfPoint canvasPoint, ModifierKeys modifiers, MouseButtonState leftButton)
     {
         if (!_interactionController.IsInteracting || leftButton != MouseButtonState.Pressed)
         {

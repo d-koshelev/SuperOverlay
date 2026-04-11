@@ -3,18 +3,18 @@ using WpfWindow = System.Windows.Window;
 using System.Windows.Controls;
 using SuperOverlay.iRacing.Hosting;
 using SuperOverlay.iRacing.Mapping;
-using SuperOverlay.iRacing.Telemetry.Mock;
+using SuperOverlay.iRacing.Telemetry.IRacing;
 
 namespace SuperOverlay.iRacing.Runtime;
 
-public static class RuntimeWindowControllerFactory
+internal static class RuntimeWindowControllerFactory
 {
     public static RuntimeWindowControllers Create(
         WpfWindow owner,
         Grid rootGrid,
         Border runtimeHintBorder,
         Border editOverlayBar,
-        MockTelemetryProvider telemetry,
+        IRacingTelemetryProvider telemetry,
         IRacingMapper mapper,
         OverlayRuntimeBootstrapper bootstrapper,
         Action focusWindow)

@@ -14,4 +14,9 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 
+
+	<ItemGroup>
+		<PackageReference Include="IRSDKSharper" Version="1.1.6" />
+	</ItemGroup>
+
 </Project>

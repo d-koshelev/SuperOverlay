@@ -2,16 +2,17 @@ using WpfWindow = System.Windows.Window;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfMouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
+using WpfRoutedEventArgs = System.Windows.RoutedEventArgs;
 using System.Windows;
 using SuperOverlay.iRacing.Mapping;
 using SuperOverlay.iRacing.Runtime;
-using SuperOverlay.iRacing.Telemetry.Mock;
+using SuperOverlay.iRacing.Telemetry.IRacing;
 
 namespace SuperOverlay.iRacing;
 
 public partial class RuntimeWindow : WpfWindow
 {
-    private readonly MockTelemetryProvider _telemetry = new();
+    private readonly IRacingTelemetryProvider _telemetry = new();
     private readonly IRacingMapper _mapper = new();
     private readonly Hosting.OverlayRuntimeBootstrapper _bootstrapper = new();
 
@@ -30,7 +31,7 @@ public partial class RuntimeWindow : WpfWindow
             _telemetry,
             _mapper,
             _bootstrapper,
-            Focus);
+            () => Focus());
 
         _runtimeController = controllers.Window;
         _interactionController = controllers.Interaction;
@@ -48,9 +49,9 @@ public partial class RuntimeWindow : WpfWindow
 
     private void RootGrid_OnMouseLeftButtonUp(object sender, WpfMouseButtonEventArgs e) => _interactionController.HandleMouseLeftButtonUp(e);
 
-    private void ApplyEditButton_OnClick(object sender, RoutedEventArgs e) => _interactionController.ApplyMoveEdit();
+    private void ApplyEditButton_OnClick(object sender, WpfRoutedEventArgs e) => _interactionController.ApplyMoveEdit();
 
-    private void CancelEditButton_OnClick(object sender, RoutedEventArgs e) => _interactionController.CancelMoveEdit();
+    private void CancelEditButton_OnClick(object sender, WpfRoutedEventArgs e) => _interactionController.CancelMoveEdit();
 
     protected override void OnClosed(EventArgs e)
     {
