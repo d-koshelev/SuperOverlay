@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public sealed class LayoutEditorWidget : INotifyPropertyChanged

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public sealed class LayoutEditorPlacementPresenter

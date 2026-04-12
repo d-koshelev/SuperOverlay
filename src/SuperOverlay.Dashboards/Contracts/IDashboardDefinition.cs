@@ -1,4 +1,4 @@
-using SuperOverlay.LayoutBuilder.Contracts;
+﻿using SuperOverlay.Core.Layouts.Contracts;
 
 namespace SuperOverlay.Dashboards.Contracts;
 

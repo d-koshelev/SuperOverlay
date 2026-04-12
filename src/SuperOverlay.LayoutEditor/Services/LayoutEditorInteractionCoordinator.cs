@@ -13,20 +13,25 @@ public sealed class LayoutEditorInteractionCoordinator
     private readonly FrameworkElement _overlayChromeLayer;
     private readonly Border _floatingMenu;
     private readonly Border _propertiesPanel;
-    private readonly LayoutEditorSelectionService _selection;
     private readonly LayoutEditorMarqueePresenter _marquee;
-    private readonly Func<DependencyObject?, LayoutEditorWidget?> _resolveWidget;
+    private readonly ILayoutEditorHitTestService _hitTest;
     private readonly Action<Point> _updatePresetPreview;
     private readonly Action<Point> _updateWidgetPreview;
     private readonly Action _confirmPresetPlacement;
     private readonly Action _confirmWidgetPlacement;
     private readonly Action _cancelPlacement;
-    private readonly Action<double, double> _moveFloatingMenu;
-    private readonly Action<double, double> _movePropertiesPanel;
+    private readonly LayoutEditorFloatingPanelInteractionService _floatingPanels;
     private readonly Action _hideGuides;
     private readonly Action _refreshSelectionDetails;
     private readonly Action _positionPropertiesPanel;
+    private readonly Action<IReadOnlyCollection<LayoutEditorWidget>, LayoutEditorWidget?> _selectWidgets;
+    private readonly Action<LayoutEditorWidget, MouseButtonEventArgs> _handleWidgetLeftClick;
     private readonly Action<LayoutEditorWidget, MouseButtonEventArgs> _handleWidgetResizeClick;
+    private readonly Action<LayoutEditorWidget, Point> _beginWidgetDrag;
+    private readonly Action _endWidgetDrag;
+    private readonly Action _endWidgetResize;
+    private readonly Action<LayoutEditorWidget> _toggleWidgetSelection;
+    private readonly Action<Point> _updateDraggedWidgets;
     private readonly Action<Point> _updateResizedWidgets;
 
     public LayoutEditorInteractionCoordinator(
@@ -35,20 +40,25 @@ public sealed class LayoutEditorInteractionCoordinator
         FrameworkElement overlayChromeLayer,
         Border floatingMenu,
         Border propertiesPanel,
-        LayoutEditorSelectionService selection,
         LayoutEditorMarqueePresenter marquee,
-        Func<DependencyObject?, LayoutEditorWidget?> resolveWidget,
+        ILayoutEditorHitTestService hitTest,
         Action<Point> updatePresetPreview,
         Action<Point> updateWidgetPreview,
         Action confirmPresetPlacement,
         Action confirmWidgetPlacement,
         Action cancelPlacement,
-        Action<double, double> moveFloatingMenu,
-        Action<double, double> movePropertiesPanel,
+        LayoutEditorFloatingPanelInteractionService floatingPanels,
         Action hideGuides,
         Action refreshSelectionDetails,
         Action positionPropertiesPanel,
+        Action<IReadOnlyCollection<LayoutEditorWidget>, LayoutEditorWidget?> selectWidgets,
+        Action<LayoutEditorWidget, MouseButtonEventArgs> handleWidgetLeftClick,
         Action<LayoutEditorWidget, MouseButtonEventArgs> handleWidgetResizeClick,
+        Action<LayoutEditorWidget, Point> beginWidgetDrag,
+        Action endWidgetDrag,
+        Action endWidgetResize,
+        Action<LayoutEditorWidget> toggleWidgetSelection,
+        Action<Point> updateDraggedWidgets,
         Action<Point> updateResizedWidgets)
     {
         _state = state;
@@ -56,20 +66,25 @@ public sealed class LayoutEditorInteractionCoordinator
         _overlayChromeLayer = overlayChromeLayer;
         _floatingMenu = floatingMenu;
         _propertiesPanel = propertiesPanel;
-        _selection = selection;
         _marquee = marquee;
-        _resolveWidget = resolveWidget;
+        _hitTest = hitTest;
         _updatePresetPreview = updatePresetPreview;
         _updateWidgetPreview = updateWidgetPreview;
         _confirmPresetPlacement = confirmPresetPlacement;
         _confirmWidgetPlacement = confirmWidgetPlacement;
         _cancelPlacement = cancelPlacement;
-        _moveFloatingMenu = moveFloatingMenu;
-        _movePropertiesPanel = movePropertiesPanel;
+        _floatingPanels = floatingPanels;
         _hideGuides = hideGuides;
         _refreshSelectionDetails = refreshSelectionDetails;
         _positionPropertiesPanel = positionPropertiesPanel;
+        _selectWidgets = selectWidgets;
+        _handleWidgetLeftClick = handleWidgetLeftClick;
         _handleWidgetResizeClick = handleWidgetResizeClick;
+        _beginWidgetDrag = beginWidgetDrag;
+        _endWidgetDrag = endWidgetDrag;
+        _endWidgetResize = endWidgetResize;
+        _toggleWidgetSelection = toggleWidgetSelection;
+        _updateDraggedWidgets = updateDraggedWidgets;
         _updateResizedWidgets = updateResizedWidgets;
     }
 
@@ -80,7 +95,8 @@ public sealed class LayoutEditorInteractionCoordinator
             return false;
         }
 
-        if (LayoutEditorVisualTreeService.IsDescendantOf(source, _propertiesPanel) || LayoutEditorVisualTreeService.IsDescendantOf(source, _floatingMenu))
+        var hit = _hitTest.Resolve(source);
+        if (hit.Kind is LayoutEditorHitKind.FloatingMenu or LayoutEditorHitKind.PropertiesPanel)
         {
             return false;
         }
@@ -97,16 +113,21 @@ public sealed class LayoutEditorInteractionCoordinator
             return true;
         }
 
-        var clickedWidget = _resolveWidget(source);
-        if (clickedWidget is not null)
+        if (hit.Kind == LayoutEditorHitKind.ResizeHandle && hit.Widget is not null)
         {
-            BeginWidgetInteraction(clickedWidget, e.GetPosition(_rootGrid));
+            _handleWidgetResizeClick(hit.Widget, e);
+            return true;
+        }
+
+        if (hit.Kind == LayoutEditorHitKind.WidgetBody && hit.Widget is not null)
+        {
+            _handleWidgetLeftClick(hit.Widget, e);
             return true;
         }
 
         _state.MarqueeStart = e.GetPosition(_overlayChromeLayer);
         _marquee.Begin(_state.MarqueeStart);
-        _selection.SelectWidgets([], null);
+        _selectWidgets([], null);
         _rootGrid.CaptureMouse();
         return true;
     }
@@ -120,12 +141,12 @@ public sealed class LayoutEditorInteractionCoordinator
             return;
         }
 
-        if (e.OriginalSource is DependencyObject source && LayoutEditorVisualTreeService.FindAncestor<ContentPresenter>(source) is not null)
+        if (e.OriginalSource is DependencyObject source && _hitTest.IsInteractiveContent(source))
         {
             return;
         }
 
-        _selection.SelectWidgets([], null);
+        _selectWidgets([], null);
         _refreshSelectionDetails();
     }
 
@@ -142,23 +163,30 @@ public sealed class LayoutEditorInteractionCoordinator
             _updateWidgetPreview(overlayPoint);
         }
 
-        if (_state.IsDraggingToolbar && e.LeftButton == MouseButtonState.Pressed)
+        if (e.LeftButton == MouseButtonState.Pressed && _floatingPanels.Update(overlayPoint))
         {
-            var target = LayoutEditorFloatingPanelDragService.ResolveToolbarPosition(_state, overlayPoint);
-            _moveFloatingMenu(target.X, target.Y);
             return true;
         }
 
-        if (_state.IsDraggingProperties && e.LeftButton == MouseButtonState.Pressed)
+        if (_state.IsPendingWidgetClick && e.LeftButton == MouseButtonState.Pressed)
         {
-            var target = LayoutEditorFloatingPanelDragService.ResolvePropertiesPosition(_state, overlayPoint);
-            _movePropertiesPanel(target.X, target.Y);
-            return true;
+            var pointer = e.GetPosition(_rootGrid);
+            var delta = pointer - _state.WidgetDragStartPointer;
+            if ((System.Math.Abs(delta.X) >= SystemParameters.MinimumHorizontalDragDistance
+                 || System.Math.Abs(delta.Y) >= SystemParameters.MinimumVerticalDragDistance)
+                && _state.PendingWidgetClickTarget is { IsLocked: false } widget)
+            {
+                _state.IsPendingWidgetClick = false;
+                _state.PendingWidgetClickTarget = null;
+                _beginWidgetDrag(widget, _state.WidgetDragStartPointer);
+                _updateDraggedWidgets(pointer);
+                return true;
+            }
         }
 
         if (_state.IsDraggingWidgets && e.LeftButton == MouseButtonState.Pressed)
         {
-            _selection.UpdateDraggedWidgets(e.GetPosition(_rootGrid), new Size(_rootGrid.ActualWidth, _rootGrid.ActualHeight));
+            _updateDraggedWidgets(e.GetPosition(_rootGrid));
             return true;
         }
 
@@ -193,16 +221,34 @@ public sealed class LayoutEditorInteractionCoordinator
 
         if (_state.IsDraggingWidgets)
         {
-            LayoutEditorDragService.EndWidgetDrag(_state);
+            _endWidgetDrag();
             _rootGrid.ReleaseMouseCapture();
             _hideGuides();
             _refreshSelectionDetails();
             return true;
         }
 
+        if (_state.IsPendingWidgetClick)
+        {
+            var widget = _state.PendingWidgetClickTarget;
+            var shouldToggleOff = widget is not null
+                && _state.PendingWidgetWasSelected
+                && !_state.PendingWidgetPreserveSelection;
+
+            _state.IsPendingWidgetClick = false;
+            _state.PendingWidgetClickTarget = null;
+
+            if (shouldToggleOff && widget is not null)
+            {
+                _toggleWidgetSelection(widget);
+            }
+
+            return widget is not null;
+        }
+
         if (_state.IsResizingWidgets)
         {
-            LayoutEditorResizeService.EndWidgetResize(_state);
+            _endWidgetResize();
             _rootGrid.ReleaseMouseCapture();
             _hideGuides();
             _refreshSelectionDetails();
@@ -228,14 +274,13 @@ public sealed class LayoutEditorInteractionCoordinator
             return false;
         }
 
-        if (e.OriginalSource is DependencyObject source && LayoutEditorVisualTreeService.IsResizeHandle(source))
+        if (e.OriginalSource is DependencyObject source && _hitTest.IsResizeHandle(source))
         {
             _handleWidgetResizeClick(widget, e);
             return true;
         }
 
-        BeginWidgetInteraction(widget, e.GetPosition(_rootGrid));
-        return true;
+        return false;
     }
 
     public bool HandleWidgetMouseMove(MouseEventArgs e)
@@ -251,7 +296,7 @@ public sealed class LayoutEditorInteractionCoordinator
             return false;
         }
 
-        _selection.UpdateDraggedWidgets(e.GetPosition(_rootGrid), new Size(_rootGrid.ActualWidth, _rootGrid.ActualHeight));
+        _updateDraggedWidgets(e.GetPosition(_rootGrid));
         return true;
     }
 
@@ -259,7 +304,7 @@ public sealed class LayoutEditorInteractionCoordinator
     {
         if (_state.IsResizingWidgets)
         {
-            LayoutEditorResizeService.EndWidgetResize(_state);
+            _endWidgetResize();
             _rootGrid.ReleaseMouseCapture();
             _hideGuides();
             _refreshSelectionDetails();
@@ -271,7 +316,7 @@ public sealed class LayoutEditorInteractionCoordinator
             return false;
         }
 
-        LayoutEditorDragService.EndWidgetDrag(_state);
+        _endWidgetDrag();
         _rootGrid.ReleaseMouseCapture();
         _hideGuides();
         _refreshSelectionDetails();
@@ -287,7 +332,7 @@ public sealed class LayoutEditorInteractionCoordinator
 
         if (!widget.IsSelected)
         {
-            _selection.SelectWidgets([widget], widget);
+            _selectWidgets([widget], widget);
             return;
         }
 
@@ -300,19 +345,19 @@ public sealed class LayoutEditorInteractionCoordinator
     {
         if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is FrameworkElement element && element.DataContext is LayoutEditorWidget widget && !widget.IsSelected)
         {
-            _selection.SelectWidgets([widget], widget);
+            _selectWidgets([widget], widget);
         }
     }
 
     public void BeginToolbarDrag(Point dragOffset)
     {
-        LayoutEditorFloatingPanelDragService.BeginToolbarDrag(_state, dragOffset);
+        _floatingPanels.BeginToolbarDrag(dragOffset);
         _rootGrid.CaptureMouse();
     }
 
     public bool EndToolbarDrag()
     {
-        if (!LayoutEditorFloatingPanelDragService.EndToolbarDrag(_state))
+        if (!_floatingPanels.EndToolbarDrag())
         {
             return false;
         }
@@ -323,13 +368,13 @@ public sealed class LayoutEditorInteractionCoordinator
 
     public void BeginPropertiesDrag(Point dragOffset)
     {
-        LayoutEditorFloatingPanelDragService.BeginPropertiesDrag(_state, dragOffset);
+        _floatingPanels.BeginPropertiesDrag(dragOffset);
         _rootGrid.CaptureMouse();
     }
 
     public bool EndPropertiesDrag()
     {
-        if (!LayoutEditorFloatingPanelDragService.EndPropertiesDrag(_state))
+        if (!_floatingPanels.EndPropertiesDrag())
         {
             return false;
         }
@@ -338,10 +383,4 @@ public sealed class LayoutEditorInteractionCoordinator
         return true;
     }
 
-    private void BeginWidgetInteraction(LayoutEditorWidget widget, Point rootPoint)
-    {
-        var selected = _selection.PrepareWidgetSelection(widget);
-        LayoutEditorDragService.BeginWidgetDrag(_state, selected, rootPoint);
-        _rootGrid.CaptureMouse();
-    }
 }

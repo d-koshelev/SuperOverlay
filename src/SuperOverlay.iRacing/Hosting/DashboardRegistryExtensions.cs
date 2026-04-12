@@ -1,15 +1,17 @@
+using SuperOverlay.Dashboards.Contracts;
 using SuperOverlay.Dashboards.Registry;
 
 namespace SuperOverlay.iRacing.Hosting;
 
-public static class DashboardRegistryExtensions
+internal static class DashboardRegistryExtensions
 {
-    public static T? GetItemSettings<T>(this DashboardRegistry registry, string typeId, object rawSettings)
-        where T : class
+    public static TSettings GetItemSettings<TSettings>(this DashboardRegistry registry, string typeId, object? rawSettings)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentException.ThrowIfNullOrWhiteSpace(typeId);
 
-        return registry.Get(typeId).MaterializeSettings(rawSettings) as T;
+        // Validate that the item exists in the registry; callers rely on registry-backed type ids.
+        _ = registry.Get(typeId);
+        return DashboardSettingsMaterializer.Materialize<TSettings>(rawSettings);
     }
 }

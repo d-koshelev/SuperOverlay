@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace SuperOverlay.LayoutEditor;
 
@@ -19,7 +20,21 @@ public partial class LayoutEditorWindow
 
         if (!widget.IsSelected)
         {
-            SelectWidgets([widget], widget);
+            var preserveSelection = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)
+                || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+
+            if (preserveSelection)
+            {
+                _selection.EnsureWidgetSelected(widget);
+            }
+            else
+            {
+                _selection.ToggleWidgetSelection(widget);
+            }
+
+            SyncEngineSelection();
+            e.Handled = true;
+            return;
         }
 
         var menu = _slotEditing.CreateSlotMenu(element, widget, slotId, AssignTextToSlot, AssignMetricToSlot, RefreshSelectionDetails);

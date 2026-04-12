@@ -1,5 +1,7 @@
 using System.Windows;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public partial class LayoutEditorWindow

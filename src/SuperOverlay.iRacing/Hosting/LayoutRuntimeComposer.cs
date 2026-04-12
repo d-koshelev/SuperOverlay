@@ -1,6 +1,6 @@
-using SuperOverlay.Dashboards.Registry;
-using SuperOverlay.LayoutBuilder.Layout;
-using SuperOverlay.LayoutBuilder.Runtime;
+﻿using SuperOverlay.Dashboards.Registry;
+using SuperOverlay.Core.Layouts.Layout;
+using SuperOverlay.Core.Layouts.Runtime;
 
 namespace SuperOverlay.iRacing.Hosting;
 

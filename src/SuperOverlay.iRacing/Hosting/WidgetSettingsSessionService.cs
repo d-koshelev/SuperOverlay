@@ -3,16 +3,17 @@ using SuperOverlay.Dashboards.Items.Gear;
 using SuperOverlay.Dashboards.Items.ShiftLeds;
 using SuperOverlay.Dashboards.Items.Speed;
 using SuperOverlay.Dashboards.Registry;
-using SuperOverlay.LayoutBuilder.Layout;
+using SuperOverlay.Core.Layouts.Layout;
 
+using SuperOverlay.Core.Layouts.Editing;
 namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class WidgetSettingsSessionService
 {
     private readonly DashboardRegistry _registry;
-    private readonly LayoutMutationService _mutationService;
+    private readonly LayoutMutationCore _mutationService;
 
-    public WidgetSettingsSessionService(DashboardRegistry registry, LayoutMutationService mutationService)
+    public WidgetSettingsSessionService(DashboardRegistry registry, LayoutMutationCore mutationService)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _mutationService = mutationService ?? throw new ArgumentNullException(nameof(mutationService));

@@ -1,5 +1,7 @@
 using System.Windows;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public sealed class LayoutEditorState
@@ -17,9 +19,16 @@ public sealed class LayoutEditorState
 
     public Point ToolbarDragOffset { get; set; }
     public Point PropertiesDragOffset { get; set; }
+    public bool HasManualToolbarPosition { get; set; }
+    public bool HasManualPropertiesPosition { get; set; }
     public Point WidgetDragStartPointer { get; set; }
     public Point WidgetResizeStartPointer { get; set; }
     public Point MarqueeStart { get; set; }
+
+    public bool IsPendingWidgetClick { get; set; }
+    public LayoutEditorWidget? PendingWidgetClickTarget { get; set; }
+    public bool PendingWidgetWasSelected { get; set; }
+    public bool PendingWidgetPreserveSelection { get; set; }
 
     public LayoutEditorWidget? PrimarySelectedWidget { get; set; }
 

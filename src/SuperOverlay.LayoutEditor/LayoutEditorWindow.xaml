@@ -14,7 +14,7 @@
         WindowState="Maximized"
         ShowInTaskbar="True"
         Focusable="True"
-        Topmost="True">
+        Topmost="False">
     <Window.Resources>
         <Style x:Key="ChromeButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#07101C"/>
@@ -78,7 +78,88 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="WidgetContextMenuItemStyle" TargetType="MenuItem">
+
+
+
+        <Style x:Key="InteractiveWidgetContainerBorderStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#C9D2E0"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="BorderBrush" Value="#00D26A"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                    <Setter Property="Opacity" Value="0.88"/>
+                </DataTrigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#FFB34A"/>
+                </Trigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsSelected}" Value="True"/>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="BorderBrush" Value="#00D26A"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="WidgetLockedBadgeStyle" TargetType="Border">
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,-2,-2,0"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Background" Value="#7A7A52"/>
+            <Setter Property="BorderBrush" Value="#D8C78A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Panel.ZIndex" Value="7"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PreviewResizeHandleStyle" TargetType="Border">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="0,0,-4,-4"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="#66C9D2E0"/>
+            <Setter Property="BorderBrush" Value="#99E0F2F5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Arrow"/>
+            <Setter Property="Panel.ZIndex" Value="6"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+        </Style>
+
+        <Style x:Key="InteractiveResizeHandleStyle" TargetType="Border">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="0,0,-4,-4"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="#99C9D2E0"/>
+            <Setter Property="BorderBrush" Value="#E0F2F5FA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="SizeNWSE"/>
+            <Setter Property="Panel.ZIndex" Value="20"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+                <Style x:Key="WidgetContextMenuItemStyle" TargetType="MenuItem">
             <Setter Property="Foreground" Value="#F2F5FA"/>
             <Setter Property="Background" Value="#07101C"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -157,7 +238,7 @@
                                     <Border Height="14"
                                             VerticalAlignment="Top"
                                             Background="Transparent"
-                                            Cursor="SizeAll"
+                                            Cursor="Arrow"
                                             PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
                                             PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
                                             PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
@@ -242,21 +323,9 @@
                                                 Style="{StaticResource SlotButtonStyle}"
                                                 Tag="BottomRight"
                                                 Click="SlotButton_OnClick"/>
+                                        <!-- Preview widgets should stay passive; real resize handles live in WidgetsItemsControl below. -->
                                         <Border x:Name="WidgetResizeHandle"
-                                                Width="14"
-                                                Height="14"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Bottom"
-                                                Margin="0,0,-4,-4"
-                                                CornerRadius="3"
-                                                Background="#99C9D2E0"
-                                                BorderBrush="#E0F2F5FA"
-                                                BorderThickness="1"
-                                                Cursor="SizeNWSE"
-                                                Panel.ZIndex="6"
-                                                PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
-                                                PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
-                                                PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"/>
+                                                Style="{StaticResource PreviewResizeHandleStyle}"/>
                                     </Grid>
                                 </Grid>
                             </Border>
@@ -285,7 +354,7 @@
                                     CornerRadius="5"
                                     Background="#E6122238"
                                     BorderThickness="2"
-                                    Cursor="SizeAll"
+                                    Cursor="Arrow"
                                     PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
                                     PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
                                     PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
@@ -344,138 +413,89 @@
                                     </ContextMenu>
                                 </Border.ContextMenu>
                                 <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="BorderBrush" Value="#C9D2E0"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                <Setter Property="BorderBrush" Value="#00D26A"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding IsLocked}" Value="True">
-                                                <Setter Property="Opacity" Value="0.88"/>
-                                            </DataTrigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="BorderBrush" Value="#FFB34A"/>
-                                            </Trigger>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding IsSelected}" Value="True"/>
-                                                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter Property="BorderBrush" Value="#00D26A"/>
-                                            </MultiDataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
+                                    <StaticResource ResourceKey="InteractiveWidgetContainerBorderStyle"/>
                                 </Border.Style>
-                                <Grid Margin="10">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="1.6*"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-                                    <Border Height="14"
-                                            VerticalAlignment="Top"
-                                            Background="Transparent"
-                                            Cursor="SizeAll"
-                                            PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
-                                            PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
-                                            PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
-                                            Panel.ZIndex="5"/>
-                                    <Border Width="18"
-                                            Height="18"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Top"
-                                            Margin="0,-2,-2,0"
-                                            CornerRadius="5"
-                                            Background="#7A7A52"
-                                            BorderBrush="#D8C78A"
-                                            BorderThickness="1"
-                                            Panel.ZIndex="7"
-                                            Visibility="Collapsed"
-                                            IsHitTestVisible="False">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsLocked}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="L"
-                                                   Foreground="#F2F5FA"
-                                                   FontSize="10"
-                                                   FontWeight="Bold"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
-                                    <Grid Grid.Row="0" Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition/>
-                                            <ColumnDefinition/>
-                                        </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0"
-                                                Content="{Binding TopLeftDisplay}"
-                                                FontSize="{Binding TopLeftFontSize}"
-                                                FontWeight="{Binding TopLeftFontWeight}"
-                                                Foreground="{Binding TopLeftForegroundBrush}"
-                                                Style="{StaticResource SlotButtonStyle}"
-                                                Tag="TopLeft"
-                                                Click="SlotButton_OnClick"/>
-                                        <Button Grid.Column="1"
-                                                Content="{Binding TopRightDisplay}"
-                                                FontSize="{Binding TopRightFontSize}"
-                                                FontWeight="{Binding TopRightFontWeight}"
-                                                Foreground="{Binding TopRightForegroundBrush}"
-                                                Style="{StaticResource SlotButtonStyle}"
-                                                Tag="TopRight"
-                                                Click="SlotButton_OnClick"/>
-                                    </Grid>
-                                    <Button Grid.Row="1"
-                                            Content="{Binding CenterDisplay}"
-                                            Style="{StaticResource SlotButtonStyle}"
-                                            Tag="Center"
-                                            FontSize="{Binding CenterFontSize}"
-                                                FontWeight="{Binding CenterFontWeight}"
-                                                Foreground="{Binding CenterForegroundBrush}"
-                                            Click="SlotButton_OnClick"/>
-                                    <Grid Grid.Row="2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition/>
-                                            <ColumnDefinition/>
-                                        </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0"
-                                                Content="{Binding BottomLeftDisplay}"
-                                                FontSize="{Binding BottomLeftFontSize}"
-                                                FontWeight="{Binding BottomLeftFontWeight}"
-                                                Foreground="{Binding BottomLeftForegroundBrush}"
-                                                Style="{StaticResource SlotButtonStyle}"
-                                                Tag="BottomLeft"
-                                                Click="SlotButton_OnClick"/>
-                                        <Button Grid.Column="1"
-                                                Content="{Binding BottomRightDisplay}"
-                                                FontSize="{Binding BottomRightFontSize}"
-                                                FontWeight="{Binding BottomRightFontWeight}"
-                                                Foreground="{Binding BottomRightForegroundBrush}"
-                                                Style="{StaticResource SlotButtonStyle}"
-                                                Tag="BottomRight"
-                                                Click="SlotButton_OnClick"/>
-                                        <Border x:Name="WidgetResizeHandle"
-                                                Width="14"
-                                                Height="14"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Bottom"
-                                                Margin="0,0,-4,-4"
-                                                CornerRadius="3"
-                                                Background="#99C9D2E0"
-                                                BorderBrush="#E0F2F5FA"
-                                                BorderThickness="1"
-                                                Cursor="SizeNWSE"
-                                                Panel.ZIndex="6"
+                                <Grid>
+                                    <Grid Margin="10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="1.6*"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <Border Height="14"
+                                                VerticalAlignment="Top"
+                                                Background="Transparent"
+                                                Cursor="Arrow"
                                                 PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
                                                 PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
-                                                PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"/>
+                                                PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
+                                                Panel.ZIndex="5"/>
+                                        <Border Style="{StaticResource WidgetLockedBadgeStyle}">
+                                            <TextBlock Text="L"
+                                                       Foreground="#F2F5FA"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Grid Grid.Row="0" Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button Grid.Column="0"
+                                                    Content="{Binding TopLeftDisplay}"
+                                                    FontSize="{Binding TopLeftFontSize}"
+                                                    FontWeight="{Binding TopLeftFontWeight}"
+                                                    Foreground="{Binding TopLeftForegroundBrush}"
+                                                    Style="{StaticResource SlotButtonStyle}"
+                                                    Tag="TopLeft"
+                                                    Click="SlotButton_OnClick"/>
+                                            <Button Grid.Column="1"
+                                                    Content="{Binding TopRightDisplay}"
+                                                    FontSize="{Binding TopRightFontSize}"
+                                                    FontWeight="{Binding TopRightFontWeight}"
+                                                    Foreground="{Binding TopRightForegroundBrush}"
+                                                    Style="{StaticResource SlotButtonStyle}"
+                                                    Tag="TopRight"
+                                                    Click="SlotButton_OnClick"/>
+                                        </Grid>
+                                        <Button Grid.Row="1"
+                                                Content="{Binding CenterDisplay}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="Center"
+                                                FontSize="{Binding CenterFontSize}"
+                                                FontWeight="{Binding CenterFontWeight}"
+                                                Foreground="{Binding CenterForegroundBrush}"
+                                                Click="SlotButton_OnClick"/>
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button Grid.Column="0"
+                                                    Content="{Binding BottomLeftDisplay}"
+                                                    FontSize="{Binding BottomLeftFontSize}"
+                                                    FontWeight="{Binding BottomLeftFontWeight}"
+                                                    Foreground="{Binding BottomLeftForegroundBrush}"
+                                                    Style="{StaticResource SlotButtonStyle}"
+                                                    Tag="BottomLeft"
+                                                    Click="SlotButton_OnClick"/>
+                                            <Button Grid.Column="1"
+                                                    Content="{Binding BottomRightDisplay}"
+                                                    FontSize="{Binding BottomRightFontSize}"
+                                                    FontWeight="{Binding BottomRightFontWeight}"
+                                                    Foreground="{Binding BottomRightForegroundBrush}"
+                                                    Style="{StaticResource SlotButtonStyle}"
+                                                    Tag="BottomRight"
+                                                    Click="SlotButton_OnClick"/>
+                                        </Grid>
                                     </Grid>
+                                    <Border x:Name="WidgetResizeHandle"
+                                            Style="{StaticResource InteractiveResizeHandleStyle}"
+                                            PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
+                                            PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
+                                            PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -484,7 +504,27 @@
             </Grid>
         </Border>
 
-        <Canvas x:Name="OverlayChromeLayer" Background="Transparent">
+        <Canvas x:Name="OverlayChromeLayer" Background="{x:Null}">
+            <Border x:Name="GridOverlayBackdrop"
+                    Width="9999"
+                    Height="9999"
+                    Background="#12000000"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"/>
+            <Border x:Name="CenterVerticalGridLine"
+                    Width="1"
+                    Height="9999"
+                    Background="#66FFFFFF"
+                    HorizontalAlignment="Center"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"/>
+            <Border x:Name="CenterHorizontalGridLine"
+                    Width="9999"
+                    Height="1"
+                    Background="#66FFFFFF"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"/>
             <Rectangle x:Name="SelectionRectangle"
                        Visibility="Collapsed"
                        Stroke="#FFB34A"

@@ -1,9 +1,10 @@
 using System.IO;
 using System.Windows.Controls;
 using SuperOverlay.Dashboards.Registry;
-using SuperOverlay.LayoutBuilder.Persistence;
-using SuperOverlay.LayoutBuilder.Runtime;
+using SuperOverlay.Core.Layouts.Persistence;
+using SuperOverlay.Core.Layouts.Runtime;
 
+using SuperOverlay.Core.Layouts.Editing;
 namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class OverlayRuntimeBootstrapper
@@ -24,7 +25,8 @@ public sealed class OverlayRuntimeBootstrapper
 
         var composer = new LayoutRuntimeComposer(registry, shellMode);
         var fileStore = new LayoutFileStore();
-        var mutationService = new LayoutMutationService(registry);
+        var mutationService = new LayoutMutationCore();
+        var itemCatalogService = new IRacingLayoutItemCatalogService(registry);
 
         var layoutHost = new LayoutHost(root, shellMode);
 
@@ -34,6 +36,7 @@ public sealed class OverlayRuntimeBootstrapper
             composer,
             fileStore,
             mutationService,
+            itemCatalogService,
             layoutPath,
             layout,
             shellMode);

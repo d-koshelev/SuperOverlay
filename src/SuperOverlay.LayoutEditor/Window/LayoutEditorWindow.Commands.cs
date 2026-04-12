@@ -232,6 +232,7 @@ public partial class LayoutEditorWindow
         {
             HideGuides();
         }
+        RefreshGridOverlay();
         RefreshChromeToggleText();
     }
 }

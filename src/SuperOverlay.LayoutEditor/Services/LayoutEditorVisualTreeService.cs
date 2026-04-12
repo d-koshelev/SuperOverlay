@@ -49,7 +49,15 @@ public static class LayoutEditorVisualTreeService
 
     public static bool IsResizeHandle(DependencyObject? source)
     {
-        return FindAncestor<FrameworkElement>(source) is { Name: "WidgetResizeHandle" };
+        for (var current = source; current is not null; current = GetParent(current))
+        {
+            if (current is FrameworkElement { Name: "WidgetResizeHandle" })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static DependencyObject? GetParent(DependencyObject current)

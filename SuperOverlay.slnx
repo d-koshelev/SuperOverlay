@@ -1,8 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/SuperOverlay.Core.Layouts/SuperOverlay.Core.Layouts.csproj" />
     <Project Path="src/SuperOverlay.Dashboards/SuperOverlay.Dashboards.csproj" />
     <Project Path="src/SuperOverlay.LayoutEditor/SuperOverlay.LayoutEditor.csproj" />
     <Project Path="src/SuperOverlay.iRacing/SuperOverlay.iRacing.csproj" />
-    <Project Path="src/SuperOverlay.LayoutBuilder/SuperOverlay.LayoutBuilder.csproj" />
   </Folder>
 </Solution>

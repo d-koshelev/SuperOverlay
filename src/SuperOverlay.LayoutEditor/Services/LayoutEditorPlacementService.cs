@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public static class LayoutEditorPlacementService

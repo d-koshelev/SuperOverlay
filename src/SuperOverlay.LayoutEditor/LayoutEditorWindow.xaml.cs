@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using SuperOverlay.Core.Layouts.Editing;
 
 namespace SuperOverlay.LayoutEditor;
 
@@ -15,19 +16,54 @@ public partial class LayoutEditorWindow : Window
     private readonly LayoutEditorCommandService _commands;
     private readonly LayoutEditorSlotEditingService _slotEditing;
     private readonly LayoutEditorPropertiesPanelPresenter _propertiesPresenter;
+    private readonly LayoutEditorManipulationService _manipulation;
     private readonly LayoutEditorSelectionService _selection;
+    private readonly LayoutEditorSnapPolicyService _snapPolicy;
     private readonly LayoutEditorMarqueePresenter _marquee;
     private readonly LayoutEditorPlacementPresenter _placement;
     private readonly LayoutEditorInteractionCoordinator _interaction;
     private readonly LayoutEditorShortcutService _shortcuts;
+    private readonly LayoutEditorSelectionVisualPresenter _selectionVisuals;
+    private readonly LayoutEditorChromePresenter _chrome;
+    private readonly LayoutEditorPropertiesPanelChromePresenter _propertiesChrome;
     private readonly LayoutEditorState _state = new();
-    private readonly ILayoutEditorInteractionEngine? _engine;
+    private readonly ILayoutEditorEngine? _engine;
 
-    public LayoutEditorWindow(ILayoutEditorInteractionEngine? engine = null)
+    public LayoutEditorWindow(ILayoutEditorEngine? engine = null)
     {
         _engine = engine;
 
         InitializeComponent();
+
+        _manipulation = new LayoutEditorManipulationService(_state);
+        _snapPolicy = new LayoutEditorSnapPolicyService(_state);
+        _selectionVisuals = new LayoutEditorSelectionVisualPresenter(Widgets, _state, RefreshSelectionDetails);
+        _chrome = new LayoutEditorChromePresenter(
+            _state,
+            Widgets,
+            FloatingMenu,
+            PropertiesPanel,
+            PlacementHintPanel,
+            SelectionRectangle,
+            WidgetsItemsControl,
+            PresetPreviewItemsControl,
+            SnapToggleButton,
+            GuidesToggleButton,
+            HideGuides,
+            RefreshGridOverlay,
+            () => SelectWidgets([], null),
+            RefreshSelectionDetails,
+            PositionPropertiesPanel,
+            () => SelectedWidgets.Count,
+            title => Title = title);
+
+
+        _propertiesChrome = new LayoutEditorPropertiesPanelChromePresenter(
+            _state,
+            OverlayChromeLayer,
+            PropertiesPanel,
+            FloatingMenu,
+            _snapPolicy);
 
         var runtime = LayoutEditorCompositionRoot.Build(
             this,
@@ -36,6 +72,7 @@ public partial class LayoutEditorWindow : Window
             PreviewWidgets,
             _engine,
             () => SelectedWidgets,
+            _manipulation,
             PositionPropertiesPanel,
             RefreshSelectionDetails,
             HideGuides,
@@ -46,7 +83,12 @@ public partial class LayoutEditorWindow : Window
             () => CancelPlacement(),
             MoveFloatingMenu,
             MovePropertiesPanel,
+            SelectWidgets,
+            HandleWidgetLeftClick,
             HandleWidgetResizeClick,
+            BeginWidgetDrag,
+            ToggleWidgetSelection,
+            UpdateDraggedWidgets,
             UpdateResizedWidgets,
             ToggleLockSelectionFromShortcut,
             ResolveWidgetFromSource,
@@ -75,17 +117,19 @@ public partial class LayoutEditorWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        ClampFloatingMenuToViewport();
+        PositionFloatingMenu();
         PositionPropertiesPanel();
-        RefreshChromeToggleText();
+        _chrome.RefreshChromeToggleText();
         HideGuides();
+        RefreshGridOverlay();
         RefreshSelectionDetails();
     }
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        ClampFloatingMenuToViewport();
+        PositionFloatingMenu();
         PositionPropertiesPanel();
+        RefreshGridOverlay();
 
         if (_state.IsPlacingPreset)
         {

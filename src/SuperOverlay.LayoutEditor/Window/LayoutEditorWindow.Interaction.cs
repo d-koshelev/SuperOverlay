@@ -121,46 +121,65 @@ public partial class LayoutEditorWindow
 
     private void MoveFloatingMenu(double left, double top)
     {
-        var point = LayoutEditorFloatingPanelLayoutService.ClampPanelPosition(
-            left,
-            top,
-            new Size(OverlayChromeLayer.ActualWidth, OverlayChromeLayer.ActualHeight),
-            new Size(FloatingMenu.ActualWidth, FloatingMenu.ActualHeight));
+        var viewport = new Size(OverlayChromeLayer.ActualWidth, OverlayChromeLayer.ActualHeight);
+        var panelSize = new Size(FloatingMenu.ActualWidth, FloatingMenu.ActualHeight);
+        var otherRect = new Rect(
+            Canvas.GetLeft(PropertiesPanel),
+            Canvas.GetTop(PropertiesPanel),
+            PropertiesPanel.Width,
+            PropertiesPanel.ActualHeight);
 
+        var point = LayoutEditorFloatingPanelSnapService.ResolveSnappedPosition(
+            new Point(left, top),
+            viewport,
+            panelSize,
+            otherRect,
+            LayoutEditorUiConstants.ChromePadding,
+            _snapPolicy.IsPanelSnapEnabled());
+
+        _state.HasManualToolbarPosition = true;
         Canvas.SetLeft(FloatingMenu, point.X);
         Canvas.SetTop(FloatingMenu, point.Y);
     }
 
     private void MovePropertiesPanel(double left, double top)
     {
-        var point = LayoutEditorFloatingPanelLayoutService.ClampPanelPosition(
-            left,
-            top,
-            new Size(OverlayChromeLayer.ActualWidth, OverlayChromeLayer.ActualHeight),
-            new Size(PropertiesPanel.Width, PropertiesPanel.ActualHeight));
-
-        Canvas.SetLeft(PropertiesPanel, point.X);
-        Canvas.SetTop(PropertiesPanel, point.Y);
+        _propertiesChrome.Move(left, top);
     }
 
     private void ClampFloatingMenuToViewport()
     {
-        MoveFloatingMenu(Canvas.GetLeft(FloatingMenu), Canvas.GetTop(FloatingMenu));
+        var point = LayoutEditorFloatingPanelLayoutService.ClampPanelPosition(
+            Canvas.GetLeft(FloatingMenu),
+            Canvas.GetTop(FloatingMenu),
+            new Size(OverlayChromeLayer.ActualWidth, OverlayChromeLayer.ActualHeight),
+            new Size(FloatingMenu.ActualWidth, FloatingMenu.ActualHeight),
+            LayoutEditorUiConstants.ChromePadding);
+
+        Canvas.SetLeft(FloatingMenu, point.X);
+        Canvas.SetTop(FloatingMenu, point.Y);
+    }
+
+    private void PositionFloatingMenu()
+    {
+        if (_state.HasManualToolbarPosition)
+        {
+            ClampFloatingMenuToViewport();
+            return;
+        }
+
+        var point = LayoutEditorFloatingPanelLayoutService.ResolveToolbarStartPosition(
+            new Size(OverlayChromeLayer.ActualWidth, OverlayChromeLayer.ActualHeight),
+            new Size(FloatingMenu.ActualWidth, FloatingMenu.ActualHeight),
+            LayoutEditorUiConstants.ChromePadding);
+
+        Canvas.SetLeft(FloatingMenu, point.X);
+        Canvas.SetTop(FloatingMenu, point.Y);
     }
 
     private void PositionPropertiesPanel()
     {
-        var anchor = SelectedWidgets.Count == 0 ? null : _state.PrimarySelectedWidget ?? SelectedWidgets[0];
-        var point = LayoutEditorFloatingPanelLayoutService.ResolvePropertiesPanelPosition(
-            anchor,
-            new Size(OverlayChromeLayer.ActualWidth, OverlayChromeLayer.ActualHeight),
-            new Size(PropertiesPanel.Width, PropertiesPanel.ActualHeight),
-            LayoutEditorUiConstants.PropertiesGap,
-            LayoutEditorUiConstants.ChromePadding,
-            LayoutEditorUiConstants.PropertiesPanelDefaultTop);
-
-        Canvas.SetLeft(PropertiesPanel, point.X);
-        Canvas.SetTop(PropertiesPanel, point.Y);
+        _propertiesChrome.Position();
     }
 
     private void BeginMarqueeSelection(Point start)

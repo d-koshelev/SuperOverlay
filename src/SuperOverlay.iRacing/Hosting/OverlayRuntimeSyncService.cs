@@ -1,6 +1,7 @@
-using SuperOverlay.LayoutBuilder.Layout;
-using SuperOverlay.LayoutBuilder.Runtime;
+using SuperOverlay.Core.Layouts.Layout;
+using SuperOverlay.Core.Layouts.Runtime;
 
+using SuperOverlay.Core.Layouts.Editing;
 namespace SuperOverlay.iRacing.Hosting;
 
 public sealed class OverlayRuntimeSyncService
@@ -20,6 +21,12 @@ public sealed class OverlayRuntimeSyncService
         _composer = composer ?? throw new ArgumentNullException(nameof(composer));
         _selectionService = selectionService ?? throw new ArgumentNullException(nameof(selectionService));
         _shellMode = shellMode;
+    }
+
+
+    public void LayoutHostUpdate(object runtimeState)
+    {
+        _layoutHost.Update(runtimeState);
     }
 
     public void RefreshRuntime(LayoutDocument layout, OverlaySelectionState selection)

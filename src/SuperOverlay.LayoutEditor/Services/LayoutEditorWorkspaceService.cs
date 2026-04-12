@@ -1,6 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using SuperOverlay.Core.Layouts.Editor;
+
+using SuperOverlay.Core.Layouts.Persistence;
+
 namespace SuperOverlay.LayoutEditor;
 
 public sealed class LayoutEditorWorkspaceService
@@ -33,7 +37,11 @@ public sealed class LayoutEditorWorkspaceService
         _presetStore.Save(document);
     }
 
-    public string SuggestPresetName(IReadOnlyList<LayoutEditorWidget> widgets) => LayoutEditorPresetStore.SuggestPresetName(widgets);
+    public string SuggestPresetName(IReadOnlyList<LayoutEditorWidget> widgets)
+        => LayoutEditorPresetStore.SuggestPresetName(
+            widgets.Count,
+            widgets.FirstOrDefault()?.Id,
+            widgets.Select(x => x.GroupId).FirstOrDefault(x => x.HasValue));
 
     public IReadOnlyList<string> ListLayoutNames() => _layoutStore.ListLayoutNames();
 

@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public sealed class LayoutEditorWidgetSlot : INotifyPropertyChanged

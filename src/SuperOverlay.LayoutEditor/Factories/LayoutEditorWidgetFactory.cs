@@ -1,3 +1,5 @@
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public static class LayoutEditorWidgetFactory

@@ -1,8 +1,8 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Text.Json;
 using SuperOverlay.Dashboards.Items.Gear;
 using SuperOverlay.Dashboards.Items.Speed;
-using SuperOverlay.LayoutBuilder.Layout;
+using SuperOverlay.Core.Layouts.Layout;
 
 namespace SuperOverlay.iRacing.Hosting;
 

@@ -1,8 +1,8 @@
-using WpfWindow = System.Windows.Window;
+﻿using WpfWindow = System.Windows.Window;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using SuperOverlay.LayoutBuilder.Runtime;
+using SuperOverlay.Core.Layouts.Runtime;
 using SuperOverlay.iRacing.Hosting;
 using SuperOverlay.iRacing.Mapping;
 using SuperOverlay.iRacing.Telemetry.IRacing;

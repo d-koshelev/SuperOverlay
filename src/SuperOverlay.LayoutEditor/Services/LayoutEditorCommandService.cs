@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using SuperOverlay.Core.Layouts.Editing;
+
+using SuperOverlay.Core.Layouts.Editor;
 
 namespace SuperOverlay.LayoutEditor;
 
@@ -10,9 +13,9 @@ public sealed class LayoutEditorCommandService
 {
     private readonly LayoutEditorWorkspaceService _workspace;
     private readonly LayoutEditorDialogService _dialogs;
-    private readonly ILayoutEditorInteractionEngine? _engine;
+    private readonly ILayoutEditorEngine? _engine;
 
-    public LayoutEditorCommandService(LayoutEditorWorkspaceService workspace, LayoutEditorDialogService dialogs, ILayoutEditorInteractionEngine? engine = null)
+    public LayoutEditorCommandService(LayoutEditorWorkspaceService workspace, LayoutEditorDialogService dialogs, ILayoutEditorEngine? engine = null)
     {
         _workspace = workspace;
         _dialogs = dialogs;

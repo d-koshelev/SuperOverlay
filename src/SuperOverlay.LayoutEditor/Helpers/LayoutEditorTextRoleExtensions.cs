@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Media;
 
+using SuperOverlay.Core.Layouts.Editor;
+
 namespace SuperOverlay.LayoutEditor;
 
 public static class LayoutEditorTextRoleExtensions

@@ -1,9 +1,10 @@
-using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
+﻿using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using SuperOverlay.LayoutBuilder.Runtime;
+using SuperOverlay.Core.Layouts.Runtime;
 using SuperOverlay.iRacing.Hosting;
+using SuperOverlay.Core.Layouts.Editing;
 
 namespace SuperOverlay.iRacing.Runtime;
 

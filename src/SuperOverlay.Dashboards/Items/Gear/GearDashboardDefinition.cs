@@ -1,5 +1,5 @@
-using SuperOverlay.Dashboards.Contracts;
-using SuperOverlay.LayoutBuilder.Contracts;
+﻿using SuperOverlay.Dashboards.Contracts;
+using SuperOverlay.Core.Layouts.Contracts;
 
 namespace SuperOverlay.Dashboards.Items.Gear;
 

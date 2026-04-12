@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
-		<ProjectReference Include="..\SuperOverlay.LayoutBuilder\SuperOverlay.LayoutBuilder.csproj" />
+		<ProjectReference Include="..\SuperOverlay.Core.Layouts\SuperOverlay.Core.Layouts.csproj" />
 	</ItemGroup>
 
 	<PropertyGroup>

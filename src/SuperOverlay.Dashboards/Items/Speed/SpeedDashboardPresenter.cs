@@ -1,8 +1,8 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using SuperOverlay.Dashboards.Runtime;
-using SuperOverlay.LayoutBuilder.Contracts;
+using SuperOverlay.Core.Layouts.Contracts;
 
 namespace SuperOverlay.Dashboards.Items.Speed;
 
