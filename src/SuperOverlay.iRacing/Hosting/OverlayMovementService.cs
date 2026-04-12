@@ -104,19 +104,21 @@ public sealed class OverlayMovementService
             return new LayoutMoveResult(false, null, null);
         }
 
+        var layoutSnapshot = layout;
+
         if (shellMode != OverlayShellMode.Editor)
         {
-            var runtimeMoveIds = _selectionService.GetActiveMoveItemIds(layout, selection, panelLayout, compiledPanelItemMap)
-                .Where(id => !IsLocked(layout, id))
+            var runtimeMoveIds = _selectionService.GetActiveMoveItemIds(layoutSnapshot, selection, panelLayout, compiledPanelItemMap)
+                .Where(id => !IsLocked(layoutSnapshot, id))
                 .ToList();
             if (runtimeMoveIds.Count == 0)
             {
                 return new LayoutMoveResult(false, null, null);
             }
 
-            var runtimePlacements = layout.Placements
+            var runtimePlacements = layoutSnapshot.Placements
                 .Where(x => runtimeMoveIds.Contains(x.ItemId))
-                .Select(x => ResolvePlacementForShell(layout, x, shellMode))
+                .Select(x => ResolvePlacementForShell(layoutSnapshot, x, shellMode))
                 .ToList();
             if (runtimePlacements.Count == 0)
             {
@@ -135,16 +137,16 @@ public sealed class OverlayMovementService
             return new LayoutMoveResult(runtimeChanged, null, null);
         }
 
-        var groupItemIds = _selectionService.GetActiveMoveItemIds(layout, selection, panelLayout, compiledPanelItemMap);
-        var movableItemIds = groupItemIds.Where(id => !IsLocked(layout, id)).ToList();
+        var groupItemIds = _selectionService.GetActiveMoveItemIds(layoutSnapshot, selection, panelLayout, compiledPanelItemMap);
+        var movableItemIds = groupItemIds.Where(id => !IsLocked(layoutSnapshot, id)).ToList();
         if (movableItemIds.Count == 0)
         {
             return new LayoutMoveResult(false, null, null);
         }
 
-        var groupPlacements = layout.Placements
+        var groupPlacements = layoutSnapshot.Placements
             .Where(x => movableItemIds.Contains(x.ItemId))
-            .Select(x => ResolvePlacementForShell(layout, x, shellMode))
+            .Select(x => ResolvePlacementForShell(layoutSnapshot, x, shellMode))
             .ToList();
         if (groupPlacements.Count == 0)
         {

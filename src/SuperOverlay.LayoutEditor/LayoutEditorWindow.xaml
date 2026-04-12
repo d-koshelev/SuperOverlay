@@ -1,0 +1,758 @@
+<Window x:Class="SuperOverlay.LayoutEditor.LayoutEditorWindow"
+        x:Name="LayoutEditorRoot"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SuperOverlay.LayoutEditor"
+        mc:Ignorable="d"
+        Title="SuperOverlay LayoutEditor"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowState="Maximized"
+        ShowInTaskbar="True"
+        Focusable="True"
+        Topmost="True">
+    <Window.Resources>
+        <Style x:Key="ChromeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#07101C"/>
+            <Setter Property="Foreground" Value="#F2F5FA"/>
+            <Setter Property="BorderBrush" Value="#FF848484"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinWidth" Value="118"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#FFB34A"/>
+                                <Setter Property="BorderBrush" Value="#FFB34A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Foreground" Value="#00D26A"/>
+                                <Setter Property="BorderBrush" Value="#00D26A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        
+
+        
+        <Style x:Key="AddSlotTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#8E9AAF"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SlotButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="#8E9AAF"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#FFB34A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="WidgetContextMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="#F2F5FA"/>
+            <Setter Property="Background" Value="#07101C"/>
+            <Setter Property="Padding" Value="12,8"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid"
+          Background="Transparent"
+          PreviewMouseLeftButtonDown="RootGrid_OnPreviewMouseLeftButtonDown"
+          PreviewMouseMove="RootGrid_OnPreviewMouseMove"
+          PreviewMouseLeftButtonUp="RootGrid_OnPreviewMouseLeftButtonUp"
+          PreviewMouseRightButtonDown="RootGrid_OnPreviewMouseRightButtonDown">
+        <Grid.ContextMenu>
+            <ContextMenu x:Name="CanvasContextMenu"
+                         Background="#07101C"
+                         BorderBrush="#F2F5FA"
+                         BorderThickness="1">
+                <MenuItem Header="Add Widget"
+                          Style="{StaticResource WidgetContextMenuItemStyle}"
+                          Click="CanvasAddWidgetMenuItem_OnClick"/>
+                <MenuItem Header="Load Preset"
+                          Style="{StaticResource WidgetContextMenuItemStyle}"
+                          Click="CanvasLoadPresetMenuItem_OnClick"/>
+                <Separator/>
+                <MenuItem Header="Save Layout"
+                          Style="{StaticResource WidgetContextMenuItemStyle}"
+                          Click="CanvasSaveLayoutMenuItem_OnClick"/>
+                <MenuItem Header="Load Layout"
+                          Style="{StaticResource WidgetContextMenuItemStyle}"
+                          Click="CanvasLoadLayoutMenuItem_OnClick"/>
+            </ContextMenu>
+        </Grid.ContextMenu>
+        <Border x:Name="CanvasSurface" Margin="0" Background="Transparent">
+            <Grid>
+                <Canvas x:Name="EditorCanvas" Background="Transparent"/>
+
+                <ItemsControl x:Name="PresetPreviewItemsControl"
+                              IsHitTestVisible="False"
+                              Opacity="0.58"
+                              ItemsSource="{Binding PreviewWidgets, ElementName=LayoutEditorRoot}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas Background="Transparent"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                            <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsVisibleInCurrentMode}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:LayoutEditorWidget}">
+                            <Border Width="{Binding Width}"
+                                    Height="{Binding Height}"
+                                    CornerRadius="5"
+                                    Background="#5C122238"
+                                    BorderThickness="1.5"
+                                    SnapsToDevicePixels="True">
+                                <Border.BorderBrush>
+                                    <SolidColorBrush Color="#FFB34A"/>
+                                </Border.BorderBrush>
+                                <Grid Margin="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="1.6*"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Border Height="14"
+                                            VerticalAlignment="Top"
+                                            Background="Transparent"
+                                            Cursor="SizeAll"
+                                            PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
+                                            PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
+                                            PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
+                                            Panel.ZIndex="5"/>
+                                    <Border Width="18"
+                                            Height="18"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="0,-2,-2,0"
+                                            CornerRadius="5"
+                                            Background="#7A7A52"
+                                            BorderBrush="#D8C78A"
+                                            BorderThickness="1"
+                                            Panel.ZIndex="7"
+                                            Visibility="Collapsed"
+                                            IsHitTestVisible="False">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="L"
+                                                   Foreground="#F2F5FA"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Grid Grid.Row="0" Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition/>
+                                            <ColumnDefinition/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Content="{Binding TopLeftDisplay}"
+                                                FontSize="{Binding TopLeftFontSize}"
+                                                FontWeight="{Binding TopLeftFontWeight}"
+                                                Foreground="{Binding TopLeftForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="TopLeft"
+                                                Click="SlotButton_OnClick"/>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding TopRightDisplay}"
+                                                FontSize="{Binding TopRightFontSize}"
+                                                FontWeight="{Binding TopRightFontWeight}"
+                                                Foreground="{Binding TopRightForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="TopRight"
+                                                Click="SlotButton_OnClick"/>
+                                    </Grid>
+                                    <Button Grid.Row="1"
+                                            Content="{Binding CenterDisplay}"
+                                            Style="{StaticResource SlotButtonStyle}"
+                                            Tag="Center"
+                                            FontSize="{Binding CenterFontSize}"
+                                            FontWeight="{Binding CenterFontWeight}"
+                                            Foreground="{Binding CenterForegroundBrush}"
+                                            Click="SlotButton_OnClick"/>
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition/>
+                                            <ColumnDefinition/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Content="{Binding BottomLeftDisplay}"
+                                                FontSize="{Binding BottomLeftFontSize}"
+                                                FontWeight="{Binding BottomLeftFontWeight}"
+                                                Foreground="{Binding BottomLeftForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="BottomLeft"
+                                                Click="SlotButton_OnClick"/>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding BottomRightDisplay}"
+                                                FontSize="{Binding BottomRightFontSize}"
+                                                FontWeight="{Binding BottomRightFontWeight}"
+                                                Foreground="{Binding BottomRightForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="BottomRight"
+                                                Click="SlotButton_OnClick"/>
+                                        <Border x:Name="WidgetResizeHandle"
+                                                Width="14"
+                                                Height="14"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom"
+                                                Margin="0,0,-4,-4"
+                                                CornerRadius="3"
+                                                Background="#99C9D2E0"
+                                                BorderBrush="#E0F2F5FA"
+                                                BorderThickness="1"
+                                                Cursor="SizeNWSE"
+                                                Panel.ZIndex="6"
+                                                PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
+                                                PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
+                                                PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl x:Name="WidgetsItemsControl"
+                              ItemsSource="{Binding Widgets, ElementName=LayoutEditorRoot}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas Background="Transparent"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                            <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:LayoutEditorWidget}">
+                            <Border Width="{Binding Width}"
+                                    Height="{Binding Height}"
+                                    CornerRadius="5"
+                                    Background="#E6122238"
+                                    BorderThickness="2"
+                                    Cursor="SizeAll"
+                                    PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
+                                    PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
+                                    PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
+                                    PreviewMouseRightButtonDown="WidgetBorder_OnPreviewMouseRightButtonDown">
+                                <Border.ContextMenu>
+                                    <ContextMenu Background="#07101C"
+                                                 BorderBrush="#F2F5FA"
+                                                 BorderThickness="1"
+                                                 Opened="WidgetContextMenu_OnOpened">
+                                        <MenuItem Header="Properties"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="PropertiesMenuItem_OnClick"/>
+                                        <MenuItem Header="Duplicate"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="DuplicateMenuItem_OnClick"/>
+                                        <Separator/>
+                                        <MenuItem Header="Group"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="GroupMenuItem_OnClick"/>
+                                        <MenuItem Header="Ungroup"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="UngroupMenuItem_OnClick"
+                                                  />
+                                        <MenuItem Header="Save as Preset"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="SaveAsPresetMenuItem_OnClick"/>
+                                        <Separator/>
+                                        <MenuItem Header="Bring Forward"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="BringForwardMenuItem_OnClick"/>
+                                        <MenuItem Header="Send Backward"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="SendBackwardMenuItem_OnClick"/>
+                                        <MenuItem Header="Bring to Front"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="BringToFrontMenuItem_OnClick"/>
+                                        <MenuItem Header="Send to Back"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="SendToBackMenuItem_OnClick"/>
+                                        <Separator/>
+                                        <MenuItem Header="Lock"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="LockMenuItem_OnClick"/>
+                                        <MenuItem Header="Unlock"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="UnlockMenuItem_OnClick"/>
+                                        <MenuItem Header="Show in race"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding ShowInRace}"
+                                                  Click="ToggleShowInRaceMenuItem_OnClick"/>
+                                        <Separator/>
+                                        <MenuItem Header="Delete"
+                                                  Style="{StaticResource WidgetContextMenuItemStyle}"
+                                                  Click="DeleteMenuItem_OnClick"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="#C9D2E0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#00D26A"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                <Setter Property="Opacity" Value="0.88"/>
+                                            </DataTrigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="#FFB34A"/>
+                                            </Trigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsSelected}" Value="True"/>
+                                                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="BorderBrush" Value="#00D26A"/>
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid Margin="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="1.6*"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Border Height="14"
+                                            VerticalAlignment="Top"
+                                            Background="Transparent"
+                                            Cursor="SizeAll"
+                                            PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
+                                            PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
+                                            PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"
+                                            Panel.ZIndex="5"/>
+                                    <Border Width="18"
+                                            Height="18"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="0,-2,-2,0"
+                                            CornerRadius="5"
+                                            Background="#7A7A52"
+                                            BorderBrush="#D8C78A"
+                                            BorderThickness="1"
+                                            Panel.ZIndex="7"
+                                            Visibility="Collapsed"
+                                            IsHitTestVisible="False">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="L"
+                                                   Foreground="#F2F5FA"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Grid Grid.Row="0" Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition/>
+                                            <ColumnDefinition/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Content="{Binding TopLeftDisplay}"
+                                                FontSize="{Binding TopLeftFontSize}"
+                                                FontWeight="{Binding TopLeftFontWeight}"
+                                                Foreground="{Binding TopLeftForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="TopLeft"
+                                                Click="SlotButton_OnClick"/>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding TopRightDisplay}"
+                                                FontSize="{Binding TopRightFontSize}"
+                                                FontWeight="{Binding TopRightFontWeight}"
+                                                Foreground="{Binding TopRightForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="TopRight"
+                                                Click="SlotButton_OnClick"/>
+                                    </Grid>
+                                    <Button Grid.Row="1"
+                                            Content="{Binding CenterDisplay}"
+                                            Style="{StaticResource SlotButtonStyle}"
+                                            Tag="Center"
+                                            FontSize="{Binding CenterFontSize}"
+                                                FontWeight="{Binding CenterFontWeight}"
+                                                Foreground="{Binding CenterForegroundBrush}"
+                                            Click="SlotButton_OnClick"/>
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition/>
+                                            <ColumnDefinition/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Content="{Binding BottomLeftDisplay}"
+                                                FontSize="{Binding BottomLeftFontSize}"
+                                                FontWeight="{Binding BottomLeftFontWeight}"
+                                                Foreground="{Binding BottomLeftForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="BottomLeft"
+                                                Click="SlotButton_OnClick"/>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding BottomRightDisplay}"
+                                                FontSize="{Binding BottomRightFontSize}"
+                                                FontWeight="{Binding BottomRightFontWeight}"
+                                                Foreground="{Binding BottomRightForegroundBrush}"
+                                                Style="{StaticResource SlotButtonStyle}"
+                                                Tag="BottomRight"
+                                                Click="SlotButton_OnClick"/>
+                                        <Border x:Name="WidgetResizeHandle"
+                                                Width="14"
+                                                Height="14"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom"
+                                                Margin="0,0,-4,-4"
+                                                CornerRadius="3"
+                                                Background="#99C9D2E0"
+                                                BorderBrush="#E0F2F5FA"
+                                                BorderThickness="1"
+                                                Cursor="SizeNWSE"
+                                                Panel.ZIndex="6"
+                                                PreviewMouseLeftButtonDown="WidgetBorder_OnPreviewMouseLeftButtonDown"
+                                                PreviewMouseLeftButtonUp="WidgetBorder_OnPreviewMouseLeftButtonUp"
+                                                PreviewMouseMove="WidgetBorder_OnPreviewMouseMove"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+
+        <Canvas x:Name="OverlayChromeLayer" Background="Transparent">
+            <Rectangle x:Name="SelectionRectangle"
+                       Visibility="Collapsed"
+                       Stroke="#FFB34A"
+                       StrokeThickness="1.5"
+                       StrokeDashArray="4,2"
+                       Fill="#26FFB34A"/>
+            <Border x:Name="VerticalGuideLine"
+                    Width="1"
+                    Background="#66FFB34A"
+                    BorderBrush="#CCFFB34A"
+                    BorderThickness="1,0,0,0"
+                    Height="9999"
+                    Canvas.Top="0"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"/>
+            <Border x:Name="HorizontalGuideLine"
+                    Height="1"
+                    Background="#66FFB34A"
+                    BorderBrush="#CCFFB34A"
+                    BorderThickness="0,1,0,0"
+                    Width="9999"
+                    Canvas.Left="0"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"/>
+
+            <Border x:Name="FloatingMenu"
+                    Width="1140"
+                    Height="86"
+                    Background="#07101C"
+                    BorderThickness="0"
+                    CornerRadius="5"
+                    Canvas.Left="16"
+                    Canvas.Top="16">
+                <Grid Margin="12,8,12,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="18"/>
+                        <RowDefinition Height="10"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border x:Name="FloatingMenuDragHandle"
+                            Grid.Row="0"
+                            Background="Transparent"
+                            Cursor="SizeAll"
+                            MouseLeftButtonDown="FloatingMenu_OnMouseLeftButtonDown"/>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Content="Add Widget" Click="AddWidgetButton_OnClick"/>
+                        <Button Grid.Column="1" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Content="Load Preset" Click="LoadPresetButton_OnClick"/>
+                        <Button Grid.Column="2" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Content="Save Layout" Click="SaveLayoutButton_OnClick"/>
+                        <Button Grid.Column="3" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Content="Load Layout" Click="LoadLayoutButton_OnClick"/>
+                        <Button x:Name="SnapToggleButton" Grid.Column="4" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Content="Snap On" Click="SnapToggleButton_OnClick"/>
+                        <Button x:Name="GuidesToggleButton" Grid.Column="5" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Content="Guides On" Click="GuidesToggleButton_OnClick"/>
+                        <Button Grid.Column="6" Margin="0,0,10,0" Style="{StaticResource ChromeButtonStyle}" Foreground="#6FC084" Content="RACE" Click="RaceButton_OnClick"/>
+                        <Button Grid.Column="7" Style="{StaticResource ChromeButtonStyle}" Foreground="#CC7A7A" Content="OFF" Click="OffButton_OnClick"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border x:Name="PlacementHintPanel"
+                    Background="#07101C"
+                    BorderBrush="#FFB34A"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="14,10"
+                    Canvas.Left="16"
+                    Canvas.Top="92"
+                    Visibility="Collapsed">
+                <TextBlock x:Name="PlacementHintText"
+                           Foreground="#F2F5FA"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Text="Preset placement mode"/>
+            </Border>
+
+            <Border x:Name="PropertiesPanel"
+                    Width="300"
+                    Background="#182A42"
+                    BorderBrush="#F2F5FA"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Canvas.Left="1020"
+                    Canvas.Top="76"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="22"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border x:Name="PropertiesPanelDragHandle"
+                            Grid.Row="0"
+                            Margin="12,10,12,0"
+                            Background="Transparent"
+                            Cursor="SizeAll"
+                            MouseLeftButtonDown="PropertiesPanel_OnMouseLeftButtonDown"/>
+
+                    <StackPanel Grid.Row="1" Margin="16,10,16,16">
+                    <TextBlock Text="Properties"
+                               Foreground="#F2F5FA"
+                               FontSize="18"
+                               FontWeight="SemiBold"/>
+                    <TextBlock x:Name="SelectedObjectTextWidget"
+                               Margin="0,14,0,0"
+                               Foreground="#F2F5FA"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Text="No object selected"/>
+                    <TextBlock x:Name="SelectedObjectMetaTextWidget"
+                               Margin="0,8,0,0"
+                               Foreground="#A7B2C7"
+                               FontSize="13"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed"/>
+                    <CheckBox x:Name="ShowInRaceLayoutCheckBox"
+                              Margin="0,16,0,0"
+                              Content="Show widget in current layout during race"
+                              Foreground="#F2F5FA"
+                              Checked="ShowInRaceLayoutCheckBox_OnChanged"
+                              Unchecked="ShowInRaceLayoutCheckBox_OnChanged"/>
+                    <TextBlock x:Name="TextSizeHeaderTextBlock"
+                               Margin="0,16,0,0"
+                               Text="Text Sizes"
+                               Foreground="#F2F5FA"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Visibility="Collapsed"/>
+                    <Grid x:Name="TextSizeGrid"
+                          Margin="0,10,0,0"
+                          Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Top Left" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="TopLeftTextSizeComboBox" Grid.Row="0" Grid.Column="2" MinWidth="100" SelectionChanged="TextSizeComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="XS"/>
+                            <ComboBoxItem Content="S"/>
+                            <ComboBoxItem Content="M"/>
+                            <ComboBoxItem Content="L"/>
+                            <ComboBoxItem Content="XL"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Top Right" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="TopRightTextSizeComboBox" Grid.Row="2" Grid.Column="2" MinWidth="100" SelectionChanged="TextSizeComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="XS"/>
+                            <ComboBoxItem Content="S"/>
+                            <ComboBoxItem Content="M"/>
+                            <ComboBoxItem Content="L"/>
+                            <ComboBoxItem Content="XL"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Center" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="CenterTextSizeComboBox" Grid.Row="4" Grid.Column="2" MinWidth="100" SelectionChanged="TextSizeComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="XS"/>
+                            <ComboBoxItem Content="S"/>
+                            <ComboBoxItem Content="M"/>
+                            <ComboBoxItem Content="L"/>
+                            <ComboBoxItem Content="XL"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Bottom Left" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="BottomLeftTextSizeComboBox" Grid.Row="6" Grid.Column="2" MinWidth="100" SelectionChanged="TextSizeComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="XS"/>
+                            <ComboBoxItem Content="S"/>
+                            <ComboBoxItem Content="M"/>
+                            <ComboBoxItem Content="L"/>
+                            <ComboBoxItem Content="XL"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" Text="Bottom Right" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="BottomRightTextSizeComboBox" Grid.Row="8" Grid.Column="2" MinWidth="100" SelectionChanged="TextSizeComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="XS"/>
+                            <ComboBoxItem Content="S"/>
+                            <ComboBoxItem Content="M"/>
+                            <ComboBoxItem Content="L"/>
+                            <ComboBoxItem Content="XL"/>
+                        </ComboBox>
+                    </Grid>
+                    <TextBlock x:Name="TextRoleHeaderTextBlock"
+                               Margin="0,16,0,0"
+                               Text="Text Roles"
+                               Foreground="#F2F5FA"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Visibility="Collapsed"/>
+                    <Grid x:Name="TextRoleGrid"
+                          Margin="0,10,0,0"
+                          Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Top Left" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="TopLeftTextRoleComboBox" Grid.Row="0" Grid.Column="2" MinWidth="100" SelectionChanged="TextRoleComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="Label"/>
+                            <ComboBoxItem Content="Value"/>
+                            <ComboBoxItem Content="Primary"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Top Right" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="TopRightTextRoleComboBox" Grid.Row="2" Grid.Column="2" MinWidth="100" SelectionChanged="TextRoleComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="Label"/>
+                            <ComboBoxItem Content="Value"/>
+                            <ComboBoxItem Content="Primary"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Center" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="CenterTextRoleComboBox" Grid.Row="4" Grid.Column="2" MinWidth="100" SelectionChanged="TextRoleComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="Label"/>
+                            <ComboBoxItem Content="Value"/>
+                            <ComboBoxItem Content="Primary"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Bottom Left" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="BottomLeftTextRoleComboBox" Grid.Row="6" Grid.Column="2" MinWidth="100" SelectionChanged="TextRoleComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="Label"/>
+                            <ComboBoxItem Content="Value"/>
+                            <ComboBoxItem Content="Primary"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" Text="Bottom Right" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="BottomRightTextRoleComboBox" Grid.Row="8" Grid.Column="2" MinWidth="100" SelectionChanged="TextRoleComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="Label"/>
+                            <ComboBoxItem Content="Value"/>
+                            <ComboBoxItem Content="Primary"/>
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+                </Grid>
+            </Border>
+        </Canvas>
+    </Grid>
+</Window>

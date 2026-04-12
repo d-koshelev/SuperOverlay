@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
 using SuperOverlay.LayoutBuilder.Contracts;
 using SuperOverlay.LayoutBuilder.Layout;
 
@@ -345,7 +344,6 @@ public sealed class RuntimeLayoutItem
             current = current switch
             {
                 Visual visual => VisualTreeHelper.GetParent(visual),
-                Visual3D visual3D => VisualTreeHelper.GetParent(visual3D),
                 FrameworkContentElement content => content.Parent,
                 _ => null
             };
