@@ -17,6 +17,8 @@ public sealed class LayoutEditorPresetWidget
     public double Height { get; set; }
     public bool ShowInRace { get; set; }
     public bool IsLocked { get; set; }
+    public string RawBindingSource { get; set; } = "TelemetryRaw";
+    public string RawBindingFieldPath { get; set; } = "Speed";
     public string? TopLeftContent { get; set; }
     public string? TopRightContent { get; set; }
     public string? CenterContent { get; set; }

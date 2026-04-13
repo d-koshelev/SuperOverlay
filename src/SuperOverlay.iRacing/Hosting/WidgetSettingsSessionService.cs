@@ -1,7 +1,6 @@
 using SuperOverlay.Dashboards.Items.DecorativePanel;
-using SuperOverlay.Dashboards.Items.Gear;
+using SuperOverlay.Dashboards.Items.RawValue;
 using SuperOverlay.Dashboards.Items.ShiftLeds;
-using SuperOverlay.Dashboards.Items.Speed;
 using SuperOverlay.Dashboards.Registry;
 using SuperOverlay.Core.Layouts.Layout;
 
@@ -73,11 +72,8 @@ public sealed class WidgetSettingsSessionService
             "dashboard.shift-leds" => _registry.GetItemSettings<ShiftLedDashboardSettings>(item.TypeId, item.Settings) is { } shift
                 ? new WidgetCornerSettings(shift.CornerTopLeft, shift.CornerTopRight, shift.CornerBottomRight, shift.CornerBottomLeft)
                 : null,
-            "dashboard.gear" => _registry.GetItemSettings<GearDashboardSettings>(item.TypeId, item.Settings) is { } gear
-                ? new WidgetCornerSettings(gear.CornerTopLeft, gear.CornerTopRight, gear.CornerBottomRight, gear.CornerBottomLeft)
-                : null,
-            "dashboard.speed" => _registry.GetItemSettings<SpeedDashboardSettings>(item.TypeId, item.Settings) is { } speed
-                ? new WidgetCornerSettings(speed.CornerTopLeft, speed.CornerTopRight, speed.CornerBottomRight, speed.CornerBottomLeft)
+            "dashboard.raw-value" => _registry.GetItemSettings<RawValueDashboardSettings>(item.TypeId, item.Settings) is { } rawValue
+                ? new WidgetCornerSettings(rawValue.CornerTopLeft, rawValue.CornerTopRight, rawValue.CornerBottomRight, rawValue.CornerBottomLeft)
                 : null,
             "dashboard.decorative-panel" => _registry.GetItemSettings<DecorativePanelDashboardSettings>(item.TypeId, item.Settings) is { } panel
                 ? new WidgetCornerSettings(panel.CornerTopLeft, panel.CornerTopRight, panel.CornerBottomRight, panel.CornerBottomLeft)
@@ -110,17 +106,8 @@ public sealed class WidgetSettingsSessionService
                     CornerBottomLeft = bottomLeft
                 }
                 : null,
-            "dashboard.gear" => _registry.GetItemSettings<GearDashboardSettings>(item.TypeId, item.Settings) is { } gear
-                ? gear with
-                {
-                    CornerTopLeft = topLeft,
-                    CornerTopRight = topRight,
-                    CornerBottomRight = bottomRight,
-                    CornerBottomLeft = bottomLeft
-                }
-                : null,
-            "dashboard.speed" => _registry.GetItemSettings<SpeedDashboardSettings>(item.TypeId, item.Settings) is { } speed
-                ? speed with
+            "dashboard.raw-value" => _registry.GetItemSettings<RawValueDashboardSettings>(item.TypeId, item.Settings) is { } rawValue
+                ? rawValue with
                 {
                     CornerTopLeft = topLeft,
                     CornerTopRight = topRight,

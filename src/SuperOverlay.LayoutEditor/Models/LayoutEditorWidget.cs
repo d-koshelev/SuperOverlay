@@ -17,6 +17,8 @@ public sealed class LayoutEditorWidget : INotifyPropertyChanged
     private int _zIndex;
     private bool _isLocked;
     private bool _isVisibleInCurrentMode = true;
+    private string _rawBindingSource = "TelemetryRaw";
+    private string _rawBindingFieldPath = "Speed";
 
     public LayoutEditorWidget()
     {
@@ -61,6 +63,9 @@ public sealed class LayoutEditorWidget : INotifyPropertyChanged
     }
 
     public bool IsGrouped => GroupId.HasValue;
+    public string RawBindingSource { get => _rawBindingSource; set => SetField(ref _rawBindingSource, string.IsNullOrWhiteSpace(value) ? "TelemetryRaw" : value); }
+    public string RawBindingFieldPath { get => _rawBindingFieldPath; set => SetField(ref _rawBindingFieldPath, string.IsNullOrWhiteSpace(value) ? "Speed" : value); }
+
 
     public string? TopLeftContent { get => TopLeftSlot.Content; set => TopLeftSlot.Content = value; }
     public string? TopRightContent { get => TopRightSlot.Content; set => TopRightSlot.Content = value; }

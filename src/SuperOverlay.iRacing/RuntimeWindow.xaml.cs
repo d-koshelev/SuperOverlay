@@ -2,7 +2,6 @@ using WpfWindow = System.Windows.Window;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfMouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
-using WpfRoutedEventArgs = System.Windows.RoutedEventArgs;
 using System.Windows;
 using SuperOverlay.iRacing.Mapping;
 using SuperOverlay.iRacing.Runtime;
@@ -26,8 +25,6 @@ public partial class RuntimeWindow : WpfWindow
         var controllers = RuntimeWindowControllerFactory.Create(
             this,
             RootGrid,
-            RuntimeHintBorder,
-            EditOverlayBar,
             _telemetry,
             _mapper,
             _bootstrapper,
@@ -48,10 +45,6 @@ public partial class RuntimeWindow : WpfWindow
     private void RootGrid_OnMouseMove(object sender, WpfMouseEventArgs e) => _interactionController.HandleMouseMove(e);
 
     private void RootGrid_OnMouseLeftButtonUp(object sender, WpfMouseButtonEventArgs e) => _interactionController.HandleMouseLeftButtonUp(e);
-
-    private void ApplyEditButton_OnClick(object sender, WpfRoutedEventArgs e) => _interactionController.ApplyMoveEdit();
-
-    private void CancelEditButton_OnClick(object sender, WpfRoutedEventArgs e) => _interactionController.CancelMoveEdit();
 
     protected override void OnClosed(EventArgs e)
     {

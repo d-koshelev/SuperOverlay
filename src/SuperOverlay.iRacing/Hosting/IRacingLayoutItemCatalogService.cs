@@ -32,6 +32,7 @@ public sealed class IRacingLayoutItemCatalogService
         var (width, height) = typeId switch
         {
             "dashboard.shift-leds" => (280d, 42d),
+            "dashboard.raw-value" => (160d, 80d),
             "dashboard.decorative-panel" => (260d, 18d),
             _ => (160d, 80d)
         };

@@ -1,334 +1,398 @@
 # SuperOverlay Architecture
 
-## Overview
+## Current project shape
 
-SuperOverlay is organized as three projects with clear and strict responsibility boundaries:
+SuperOverlay is currently organized around four active projects:
 
-- `SuperOverlay.LayoutBuilder`
+- `SuperOverlay.Core.Layouts`
 - `SuperOverlay.Dashboards`
+- `SuperOverlay.LayoutEditor`
 - `SuperOverlay.iRacing`
 
-This separation exists to ensure that layout logic, dashboard rendering logic, and telemetry integration do not collapse into one mixed codebase.
+Legacy `LayoutBuilder` is not part of the active architecture and should not be reintroduced into runtime or editor flows.
 
 ---
 
-## Project Responsibilities
+## Responsibility boundaries
 
-### SuperOverlay.LayoutBuilder
-
+### SuperOverlay.Core.Layouts
 Responsible for:
-
-- layout data structures
-- runtime hosting of layout items
-- layout item lifecycle
-- later: edit mode, drag, resize, snapping, glue
-- later: layout persistence
+- layout document model
+- layout runtime host
+- item placement and shell composition contracts
+- prepared-state application surface between backend and widgets
 
 Does not know:
-
 - iRacing SDK
-- sim-specific telemetry concepts
-- dashboard-specific business meaning such as gear, fuel, relative, etc.
-
----
+- sim-specific telemetry semantics
+- strategy logic
+- widget-specific business rules
 
 ### SuperOverlay.Dashboards
-
 Responsible for:
-
 - dashboard item definitions
-- dashboard presenters/views
-- dashboard item settings
-- unified dashboard runtime state
+- widget settings models
+- prepared payload models
+- presenters and renderers
 - dashboard registry
 
 Does not know:
+- direct iRacing SDK access
+- telemetry connection lifecycle
+- raw SDK threading
 
-- iRacing SDK
-- layout persistence internals
-- sim connection details
-
----
-
-### SuperOverlay.iRacing
-
+### SuperOverlay.LayoutEditor
 Responsible for:
-
-- telemetry integration with iRacing
-- telemetry mocking for development
-- mapping iRacing data into dashboard runtime state
-- startup composition
-- overlay application hosting
-
-May reference both `LayoutBuilder` and `Dashboards`.
-
----
-
-## Project Dependencies
-
-Dependencies are intentionally one-directional:
-
-- `SuperOverlay.Dashboards -> SuperOverlay.LayoutBuilder`
-- `SuperOverlay.iRacing -> SuperOverlay.LayoutBuilder`
-- `SuperOverlay.iRacing -> SuperOverlay.Dashboards`
-
-`SuperOverlay.LayoutBuilder` must not depend on `Dashboards` or `iRacing`.
-
----
-
-## Internal Structure
-
-### SuperOverlay.LayoutBuilder
-
-Current intended structure:
-
-- `Contracts/`
-- `Layout/`
-- `Runtime/`
-
-Planned future structure:
-
-- `Editing/`
-- `Interaction/`
-- `Persistence/`
-
-#### Contracts
-External contracts required by layout items.
-
-#### Layout
-Pure layout data model.
-
-#### Runtime
-Runtime hosting and management of live layout items.
-
----
-
-### SuperOverlay.Dashboards
-
-Current intended structure:
-
-- `Contracts/`
-- `Runtime/`
-- `Registry/`
-- `Items/`
-
-#### Contracts
-Dashboard-specific contracts such as dashboard definitions.
-
-#### Runtime
-Unified runtime state used by all dashboard items.
-
-#### Registry
-Catalog of available dashboard item definitions.
-
-#### Items
-Concrete dashboard item implementations such as Gear, Speed, Pedals, Fuel, Relative, etc.
-
----
-
-### SuperOverlay.iRacing
-
-Current intended structure:
-
-- `Telemetry/`
-  - `Mock/`
-  - `Live/`
-- `Mapping/`
-- `Hosting/`
-
-Planned future structure:
-
-- `Configuration/`
-- `Bootstrap/`
-
-#### Telemetry
-Raw data providers.
-
-#### Mapping
-Maps raw iRacing data into `DashboardRuntimeState`.
-
-#### Hosting
-Application orchestration and runtime update flow.
-
----
-
-## Layout Model
-
-The layout model is data-only.
-
-It does not contain controls, presenters, services, or runtime references.
-
-### LayoutDocument
-
-Represents a full layout.
-
-Contains:
-
-- `Version`
-- `Name`
-- `Canvas`
-- `Items`
-- `Placements`
-- `Links`
-
----
-
-### LayoutCanvas
-
-Represents the base canvas for which the layout is defined.
-
-Contains:
-
-- `Width`
-- `Height`
-
-This exists so the layout can later support scaling and resolution-aware behavior.
-
----
-
-### LayoutItemInstance
-
-Represents a dashboard item instance inside a layout.
-
-Contains:
-
-- `Id`
-- `TypeId`
-- `Settings`
-
-Notes:
-
-- `Id` is the stable identifier of the instance inside the layout
-- `TypeId` is a stable string such as `dashboard.gear`
-- `Settings` contains serialized item-specific configuration
-
----
-
-### LayoutItemPlacement
-
-Represents where an item is placed on the layout.
-
-Contains:
-
-- `ItemId`
-- `X`
-- `Y`
-- `Width`
-- `Height`
-- `ZIndex`
-
-Placement is intentionally separate from the item instance.
-
----
-
-### LayoutItemLink
-
-Represents a structural relationship between items.
-
-Contains:
-
-- `SourceItemId`
-- `TargetItemId`
-- `SourceSide`
-- `TargetSide`
-- `Gap`
-
-Links are the foundation for future glue/attach behavior and grouped movement.
-
----
-
-## Dashboard Model
-
-### IDashboardDefinition
-
-Represents a dashboard item type.
-
-A definition must provide:
-
-- `TypeId`
-- `DisplayName`
-- `SettingsType`
-- default settings creation
-- presenter creation
-
-A dashboard definition is metadata plus a factory for a dashboard item type.
-
-It is not a runtime instance.
-
----
-
-### DashboardRegistry
-
-Maps dashboard type identifiers to dashboard definitions.
-
-Responsibilities:
-
-- register definitions
-- resolve definitions by `TypeId`
-- expose available definitions
-
-The registry is a catalog of types, not a holder of runtime instances.
-
----
-
-### DashboardRuntimeState
-
-Represents the unified runtime state consumed by dashboard items.
-
-This is the only runtime data shape that dashboard items should depend on.
-
-Dashboard items must not depend on raw iRacing SDK objects.
-
----
-
-## Runtime Model
-
-### RuntimeLayoutItem
-
-Represents one live runtime item on the overlay.
-
-It binds together:
-
-- `LayoutItemInstance`
-- `LayoutItemPlacement`
-- `IDashboardDefinition`
-- `ILayoutItemPresenter`
-- `View`
-
-This object is the bridge between layout data and live UI.
-
----
-
-### LayoutHost
-
-Responsible for turning layout data into live runtime UI.
-
-Responsibilities:
-
-- accept a layout document
-- resolve dashboard definitions via registry
-- create presenters
-- create runtime layout items
-- add views to the render surface
-- update all runtime items with runtime state
+- editor shell
+- selection, marquee, drag, resize, snapping
+- properties panel
+- editing authoring UX
 
 Does not know:
+- live sim connection internals
+- telemetry ingestion
+- heavy presentation calculations
 
-- concrete dashboard classes such as Gear or Speed
-- iRacing telemetry
-- how layouts are authored
+### SuperOverlay.iRacing
+Responsible for:
+- iRacing SDK integration
+- fast telemetry reader
+- slow session info reader
+- raw stores
+- backend presentation processing
+- runtime hosting and shell mode orchestration
+
+May reference all other projects.
 
 ---
 
-## Runtime Flow
+## Core runtime pipeline
 
-### Data Flow
+The active direction is a backend-driven pipeline:
 
-```text
-iRacing telemetry
--> mapping
--> DashboardRuntimeState
--> LayoutHost.Update(state)
--> RuntimeLayoutItems
--> Presenters
--> UI
+`Readers -> Raw Stores -> Presentation Processors -> Prepared State -> Publisher -> Widgets`
+
+### 1. Readers
+Two independent ingestion paths are required:
+
+- `Fast telemetry reader`
+  - reads fast-changing telemetry values
+  - writes into `TelemetryRawStore`
+- `Slow session reader`
+  - reads session info / metadata / thresholds / mostly static values
+  - writes into `SessionInfoStore`
+
+### 2. Raw stores
+Raw stores keep source-of-truth values exactly as received from telemetry.
+
+Rules:
+- raw data must remain raw
+- no smoothing or beautification in raw stores
+- raw stores must be safe for concurrent read/update
+- state handoff should prefer atomic snapshot replacement over long lock-held mutation
+
+### 3. Presentation processors
+Processors read raw stores plus widget config and produce prepared payloads.
+
+Processors are responsible for:
+- selecting which field to display
+- formatting the final display text when needed
+- evaluating rules and thresholds
+- producing colors, borders, visibility, and other style outputs
+- computing custom widget payloads for domain widgets
+
+Widgets are **not** responsible for evaluating telemetry rules.
+
+### 4. Prepared state
+Prepared state is the backend-owned, widget-ready view of the overlay.
+
+Conceptually:
+- `WidgetId -> PreparedPayload`
+- optionally with version / hash / timestamp / changed flag
+
+This layer is required for:
+- publish only on change
+- selective updates
+- debugging what the user should have seen
+- replay/freeze scenarios later
+
+### 5. Publisher
+Publisher compares newly prepared payload against previously published payload.
+
+Rules:
+- if payload did not change, do not publish
+- unchanged widgets must not receive `Apply` calls
+- publisher should be change-aware, not tick-aware only
+
+### 6. Widgets
+Widgets render prepared payload only.
+
+Widgets must:
+- not read telemetry directly
+- not evaluate business rules
+- not perform heavy calculations on the UI thread
+- remain as dumb renderers as possible
+
+---
+
+## Raw data model
+
+### TelemetryRaw
+Fast-changing telemetry values.
+
+Examples:
+- speed
+- rpm
+- gear
+- throttle
+- brake
+- clutch
+- temperatures
+- pressures
+
+### SessionInfo
+Slow-changing metadata and session structures.
+
+Examples:
+- track info
+- driver info
+- car metadata
+- SDK-provided warning / critical thresholds where available
+
+### Field selection model
+Widgets should bind by source plus field path.
+
+Examples:
+- `TelemetryRaw:Speed`
+- `TelemetryRaw:Gear`
+- `SessionInfo:WeekendInfo.TrackDisplayName`
+
+The field catalog is currently code-driven and must remain stable without depending on prior runtime export files.
+
+---
+
+## Widget families
+
+SuperOverlay will contain two major widget families.
+
+### A. Generic widgets
+Reusable widgets with configurable bindings and rules.
+
+Examples:
+- `One Value`
+- `Label : Value List`
+- later: bars, indicators, badges, traces
+
+These widgets use shared backend concepts:
+- field bindings
+- base style
+- rule evaluation
+- prepared payload output
+
+### B. Custom widgets
+Domain widgets with unique logic and unique payloads.
+
+Examples:
+- `Shift LED Panel`
+- `Pit Strategy`
+- `Fuel Strategy`
+- `Radar`
+- `Relative`
+
+Custom widgets still follow the same architecture pattern:
+
+`Config -> Processor -> Prepared Payload -> Renderer`
+
+The difference is only in widget-specific processor logic and payload shape.
+
+---
+
+## One Value widget
+
+`One Value` is the first generic backend-driven widget.
+
+It displays one bound value and receives already prepared visual state from backend processors.
+
+### Core properties
+- value binding
+- background color
+- border color
+- border thickness
+- foreground color
+- corner radius per corner
+
+### Rule model
+Rules belong to backend processing, not the widget.
+
+Rules may depend on:
+- the displayed field
+- another telemetry field
+- SDK-provided warning / critical threshold fields
+
+Example:
+- display `Gear`
+- evaluate severity using `RPM`
+- backend returns text plus background color
+
+---
+
+## Label : Value List widget
+
+Planned generic widget for rows like:
+
+- `WATER: 118`
+- `OIL: 126`
+- `ABS: 3`
+- `TC: 5`
+
+Each row has a severity state:
+- `Normal`
+- `Warning`
+- `Critical`
+
+Severity may be computed from:
+- manual rules
+- SDK-provided warning / critical thresholds
+
+For values like `WATER` and `OIL`, iRacing-provided warning and critical thresholds should be preferred when available.
+
+---
+
+## Editor and runtime modes
+
+The product now has a strict mode split.
+
+### RACE mode
+- launches the active overlay in runtime mode
+- overlay widgets remain topmost as required for racing use
+- the master control widget itself is **not** required to stay topmost and may sit under the game window
+- runtime mode must not expose editor commands in the overlay itself
+
+### EDIT mode
+- stops the active runtime overlay
+- opens the editor for the current active layout
+- the master control widget becomes topmost so editing controls remain reachable
+- all overlay changes happen only in edit mode
+
+### Mode intent
+- `RACE` means: save current layout and launch the current overlay
+- `EDIT` means: stop race overlay and enter layout editing
+- `EXIT` means: close both editor/runtime and terminate the app cleanly
+
+The active layout used by `RACE` and `EDIT` must be the same current layout document.
+
+---
+
+## Performance rules
+
+Performance is a first-class architectural requirement.
+
+### Non-negotiable principles
+1. Show real telemetry values, not smoothed approximations.
+2. Different workload classes must not share one execution path if they can block each other.
+3. Heavy processors must never delay fast visual widgets.
+4. Widgets must not re-render when prepared payload is unchanged.
+5. UI thread must only apply prepared state and render.
+
+### Threading / execution lanes
+Do **not** create one thread per widget.
+
+Instead, separate work by execution lane:
+- `Fast`
+- `Standard`
+- `Heavy`
+
+#### Fast lane
+Examples:
+- speed
+- gear
+- shift lights
+- simple one-value widgets
+- fast indicators
+
+#### Standard lane
+Examples:
+- label/value lists
+- threshold-driven status blocks
+- temperatures
+- ABS/TC displays
+
+#### Heavy lane
+Examples:
+- pit strategy
+- fuel strategy
+- radar
+- relative
+- predictive/domain-heavy widgets
+
+### UI thread rules
+The UI thread must not do:
+- SDK reads
+- rule evaluation
+- heavy layout calculations
+- strategy calculations
+- history computation
+- file IO
+- reflection-heavy hot path binding resolution
+
+### Allocation rules
+In hot paths, avoid:
+- unnecessary LINQ in per-tick loops
+- rebuilding visual trees per tick
+- repeated reflection lookups
+- new transient collections every update when avoidable
+- repeated formatting work when output has not changed
+
+### State handoff rules
+- prefer atomic snapshot replacement
+- avoid one giant global mutable lock
+- keep raw ingestion isolated from processing lanes
+- keep processing isolated from rendering
+
+### Publish rules
+- publish prepared payload only when changed
+- unchanged widgets must not receive update calls
+- payload equality should be the primary gate for UI work
+
+### Graph rules
+Fast graphs should use:
+- fixed-size history buffers
+- direct lightweight drawing
+- short rolling history
+- no heavyweight chart libraries
+
+---
+
+## Explicit anti-rules
+
+The following are architectural anti-patterns and should be avoided:
+- business logic inside widget controls
+- direct telemetry access from widgets
+- smoothing telemetry values just to make them look nicer
+- one monolithic processor loop for all widget classes
+- one heavy lock around all state
+- thread-per-widget design
+- chart-library-based fast telemetry traces
+- re-applying unchanged widget state every tick
+
+---
+
+## Near-term roadmap
+
+### Foundation
+- formalize processing lanes
+- formalize prepared state store
+- formalize change-aware publisher
+
+### Generic widgets
+- finish backend-driven `One Value`
+- add backend-driven `Label : Value List`
+
+### Custom widgets
+- `Shift LED Panel`
+- `Pit Strategy`
+- further custom racing widgets after the backend pipeline is stable
+
+The architecture goal remains consistent:
+
+**Readers and processors do the thinking. Widgets only render prepared truth.**

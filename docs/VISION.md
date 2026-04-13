@@ -1,134 +1,103 @@
 # SuperOverlay Vision
 
-## Purpose
+## Product direction
 
-SuperOverlay is a sim racing overlay platform built around a composable layout system.
+SuperOverlay is a sim-racing overlay platform built around:
+- a reusable layout system
+- a reusable widget platform
+- strict backend-driven rendering
+- high-performance runtime behavior
 
-The goal is not to ship a fixed set of monolithic widgets, but to provide a system where the user can build a personal HUD from independent dashboard items such as gear, speed, RPM, pedals, fuel, relative, and other racing-related UI elements.
-
-The project should remain clean, extensible, and understandable as it grows.
-
----
-
-## Core Idea
-
-An overlay is a layout composed of independent dashboard items.
-
-Each item is a self-contained visual unit with its own settings and rendering behavior.  
-The user should be able to combine these items into a custom interface that matches personal preferences, car type, sim type, or race situation.
-
-Examples:
-
-- gear + speed + RPM
-- pedals next to the central dashboard
-- relative at the top
-- fuel and strategy on the side
-
-The layout should be flexible rather than predefined.
-
----
-
-## Product Direction
-
-SuperOverlay is designed as a reusable overlay system, not as a single-sim hardcoded app.
-
-iRacing is the first telemetry source and host application, but the architecture should allow future support for other sims without rewriting the dashboard layer or the layout system.
+The project is not intended to become a pile of custom controls with logic embedded in UI.
 
 The long-term direction is:
-
-- reusable layout builder
-- reusable dashboard item library
-- replaceable telemetry providers
-- user-shareable layouts
-- clean separation between UI and data source
-
----
-
-## Architectural Principles
-
-### 1. Layout is independent from telemetry
-
-The layout system must not know anything about iRacing-specific APIs or sim-specific SDK concepts.
-
-A layout only describes:
-
-- which items exist
-- where they are placed
-- how they are linked
-- what settings they use
-
-### 2. Dashboard items are independent from telemetry source
-
-Dashboard items must consume a unified runtime state, not raw sim SDK data.
-
-This allows the same dashboard library to be reused by different hosts and telemetry sources.
-
-### 3. Telemetry is an adapter layer
-
-Telemetry integration is a separate concern.
-
-A sim-specific project is responsible for:
-
-- connecting to the sim
-- reading data
-- mapping it into a unified runtime state
-- passing that state into the overlay system
-
-### 4. The system must be composable
-
-New dashboard items must be addable without changing the layout engine.
-
-New telemetry sources must be addable without changing the dashboard library.
-
-### 5. The system must remain understandable
-
-The project should avoid architecture that looks impressive but becomes hard to maintain.
-
-The structure should stay small, explicit, and easy to reason about.
+- reusable generic widgets
+- reusable custom domain widgets
+- sim-specific reader/host layers
+- shared layout editing and runtime launching
+- predictable performance under live telemetry load
 
 ---
 
-## Solution Shape
+## Core product idea
 
-The system is built as three projects:
+A user builds an overlay from widgets.
 
-### SuperOverlay.LayoutBuilder
-Responsible for layout structure, runtime hosting of layout items, and later editing features such as drag, resize, snapping, and glue.
+Some widgets are generic:
+- one value
+- label : value list
+- status indicators
+- later small traces and bars
 
-### SuperOverlay.Dashboards
-Responsible for the dashboard item library, dashboard runtime contracts, and item registry.
+Some widgets are domain-specific:
+- shift LED panel
+- pit strategy
+- fuel strategy
+- radar
+- relative
 
-### SuperOverlay.iRacing
-Responsible for iRacing telemetry, mapping, startup wiring, and hosting the overlay application.
+All of them must fit the same backend model:
 
-This split exists to protect the architecture from sim-specific coupling.
-
----
-
-## User Experience Goal
-
-The user experience should eventually allow a driver to:
-
-- choose available dashboard items
-- place them freely on the overlay
-- resize and align them
-- attach items to each other
-- save and load layouts
-- reuse layouts across sessions
-- potentially share layouts with other users
-
-The overlay should feel modular, fast, and purpose-built for sim racing.
+`Config -> Backend Processor -> Prepared Payload -> Renderer`
 
 ---
 
-## Long-Term Goal
+## UX direction
 
-The long-term goal is to create an open and extensible overlay platform that is:
+The top-level user workflow is mode-based:
 
-- modular
-- sim-agnostic at the dashboard/layout level
-- easy to expand
-- easy to maintain
-- suitable for open-source development
+- `RACE`
+  - launches the current overlay in runtime mode
+- `EDIT`
+  - stops runtime and opens the editor for the current layout
+- `EXIT`
+  - closes the application cleanly
 
-SuperOverlay should grow as a system, not as a pile of special cases.
+Overlay changes happen only in `EDIT` mode.
+`RACE` always uses the current layout and starts the live overlay from it.
+
+---
+
+## Truthfulness principle
+
+Displayed values should reflect the telemetry truth that was actually received.
+
+The project should prefer:
+- correct raw values
+- backend-calculated severity
+- SDK-provided thresholds where available
+
+The project should avoid:
+- decorative smoothing that changes what the driver really saw in telemetry
+- UI-side logic that diverges from backend truth
+
+---
+
+## Performance principle
+
+The platform is intended for live sim-racing use, so performance is not an optimization pass to add later. It is part of the design.
+
+Target characteristics:
+- cheap widgets
+- cheap publishes
+- isolated workload classes
+- no unnecessary UI churn
+- no heavy logic on the UI thread
+- no re-render when payload did not change
+
+---
+
+## Architectural direction
+
+The long-term architecture remains:
+
+`Fast reader + Slow reader -> Raw stores -> Presentation processors -> Prepared state -> Change-aware publisher -> Widgets`
+
+This makes it possible to support:
+- generic widgets
+- custom widgets
+- debugging of expected display state
+- replay/freeze later
+- performance isolation by workload class
+
+SuperOverlay should grow as a platform, not as a collection of unrelated hardcoded widgets.

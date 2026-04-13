@@ -42,12 +42,12 @@ public sealed class LayoutEditorHitTestService : ILayoutEditorHitTestService
 
     public LayoutEditorHitResult Resolve(DependencyObject? source)
     {
-        if (LayoutEditorVisualTreeService.IsDescendantOf(source, _floatingMenu))
+        if (LayoutEditorVisualTreeService.IsWithinOrOwnedBy(source, _floatingMenu))
         {
             return new LayoutEditorHitResult(LayoutEditorHitKind.FloatingMenu, null);
         }
 
-        if (LayoutEditorVisualTreeService.IsDescendantOf(source, _propertiesPanel))
+        if (LayoutEditorVisualTreeService.IsWithinOrOwnedBy(source, _propertiesPanel))
         {
             return new LayoutEditorHitResult(LayoutEditorHitKind.PropertiesPanel, null);
         }

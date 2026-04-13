@@ -74,9 +74,11 @@ public partial class LayoutEditorWindow
 
     private void UpdateDraggedWidgets(Point pointer)
     {
-        if (_engine is null)
+        var selectedWidgets = SelectedWidgets;
+        if (_engine is null || selectedWidgets.Count > 1)
         {
             _selection.UpdateDraggedWidgets(pointer, new Size(RootGrid.ActualWidth, RootGrid.ActualHeight));
+            SyncEngineFromWidgets();
             return;
         }
 

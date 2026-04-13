@@ -4,64 +4,76 @@ namespace SuperOverlay.iRacing.Telemetry.IRacing;
 
 public sealed class IRacingSnapshotMapper
 {
-    private static readonly string[] RawSampleKeys =
+    public IRacingTelemetryRawState CreateTelemetryRawState(IRacingSdkData data)
     {
-        "Speed", "RPM", "Gear", "ShiftIndicatorPct", "Throttle", "Brake", "Clutch",
-        "SessionFlags", "EngineWarnings", "CarLeftRight", "OnPitRoad", "LapDistPct",
-        "PlayerTrackSurface", "PlayerTrackSurfaceMaterial", "PitSvFlags", "PitSvStatus",
-        "FuelLevel", "FuelLevelPct", "FuelUsePerHour", "FuelPress", "TrackTemp", "AirTemp",
-        "TrackWetness", "PaceFlags", "PaceMode", "SessionState", "SteeringWheelAngle"
-    };
+        var catalog = data.TelemetryDataProperties
+            .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new IRacingTelemetryVariableInventoryEntry(
+                x.Value.Name ?? x.Key,
+                x.Value.Desc ?? string.Empty,
+                x.Value.Unit ?? string.Empty,
+                x.Value.VarType.ToString(),
+                x.Value.Offset,
+                x.Value.Count,
+                x.Value.CountAsTime,
+                TryFormatSampleValue(data, x.Key, x.Value)))
+            .ToArray();
 
-    public IRacingRawTelemetrySnapshot CreateRawTelemetrySnapshot(IRacingSdkData data)
-    {
-        var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var key in RawSampleKeys)
-        {
-            if (!data.TelemetryDataProperties.ContainsKey(key))
-            {
-                continue;
-            }
-
-            try
-            {
-                values[key] = data.GetValue(key);
-            }
-            catch
-            {
-                values[key] = null;
-            }
-        }
-
-        return new IRacingRawTelemetrySnapshot(
+        return new IRacingTelemetryRawState(
             DateTimeOffset.UtcNow,
             data.TickCount,
             data.FramesDropped,
-            values);
+            CreateTelemetryValues(data),
+            catalog);
     }
 
-    public IRacingRawSessionSnapshot? CreateRawSessionSnapshot(IRacingSdkData data)
+    public IRacingSessionInfoRawState? CreateSessionInfoRawState(IRacingSdkData data)
     {
         if (string.IsNullOrWhiteSpace(data.SessionInfoYaml))
         {
             return null;
         }
 
-        return new IRacingRawSessionSnapshot(
+        return new IRacingSessionInfoRawState(
             DateTimeOffset.UtcNow,
             data.SessionInfoUpdate,
             data.SessionInfoYaml,
-            null,
-            null,
-            null,
-            null);
+            CreateSessionInfoValues(data));
+    }
+
+    public IRacingRawTelemetrySnapshot CreateRawTelemetrySnapshot(IRacingTelemetryRawState telemetryState)
+        => new(telemetryState.CapturedAtUtc, telemetryState.TickCount, telemetryState.FramesDropped, telemetryState.Fields);
+
+    public IRacingRawSessionSnapshot? CreateRawSessionSnapshot(IRacingSessionInfoRawState? sessionState)
+    {
+        if (sessionState is null)
+        {
+            return null;
+        }
+
+        sessionState.Fields.TryGetValue("SessionInfo.Sessions[0].SessionType", out var sessionType);
+        sessionState.Fields.TryGetValue("SessionInfo.Sessions[0].SessionName", out var sessionName);
+        sessionState.Fields.TryGetValue("WeekendInfo.TrackDisplayName", out var trackDisplayName);
+        sessionState.Fields.TryGetValue("DriverInfo.Drivers[0].CarScreenName", out var carScreenName);
+
+        return new IRacingRawSessionSnapshot(
+            sessionState.CapturedAtUtc,
+            sessionState.SessionInfoUpdate,
+            sessionState.SessionInfoYaml,
+            sessionState.Fields,
+            sessionType?.ToString(),
+            sessionName?.ToString(),
+            trackDisplayName?.ToString(),
+            carScreenName?.ToString());
     }
 
     public IRacingNormalizedSnapshot CreateNormalizedSnapshot(IRacingSdk sdk)
     {
         var data = sdk.Data;
-        var rawTelemetry = CreateRawTelemetrySnapshot(data);
-        var rawSession = CreateRawSessionSnapshot(data);
+        var telemetryState = CreateTelemetryRawState(data);
+        var sessionState = CreateSessionInfoRawState(data);
+        var rawTelemetry = CreateRawTelemetrySnapshot(telemetryState);
+        var rawSession = CreateRawSessionSnapshot(sessionState);
 
         var engineWarnings = ReadEnumFlags(data, "EngineWarnings", default(IRacingSdkEnum.EngineWarnings));
         var sessionFlags = ReadEnumFlags(data, "SessionFlags", default(IRacingSdkEnum.Flags));
@@ -111,10 +123,10 @@ public sealed class IRacingSnapshotMapper
 
         var session = new IRacingSessionStateBlock(
             SessionInfoUpdate: data.SessionInfoUpdate,
-            SessionName: null,
-            SessionType: null,
-            TrackDisplayName: null,
-            CarScreenName: null,
+            SessionName: rawSession?.SessionName,
+            SessionType: rawSession?.SessionType,
+            TrackDisplayName: rawSession?.TrackDisplayName,
+            CarScreenName: rawSession?.CarScreenName,
             SessionTickRate: data.TickRate);
 
         return new IRacingNormalizedSnapshot(
@@ -128,6 +140,118 @@ public sealed class IRacingSnapshotMapper
             session,
             rawTelemetry,
             rawSession);
+    }
+
+    private static Dictionary<string, object?> CreateTelemetryValues(IRacingSdkData data)
+    {
+        var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in data.TelemetryDataProperties)
+        {
+            try
+            {
+                values[pair.Key] = ReadTelemetryValue(data, pair.Value);
+            }
+            catch
+            {
+                values[pair.Key] = null;
+            }
+        }
+
+        return values;
+    }
+
+    private static Dictionary<string, object?> CreateSessionInfoValues(IRacingSdkData data)
+    {
+        var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        var list = data.sessionInfoAsList;
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i] is IRacingSdkSessionInfoAsList.Datum datum && !string.IsNullOrWhiteSpace(datum.key))
+            {
+                values[datum.key] = datum.value;
+            }
+        }
+
+        return values;
+    }
+
+    private static object? ReadTelemetryValue(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        if (datum.Count <= 1)
+        {
+            return data.GetValue(datum);
+        }
+
+        return datum.VarType switch
+        {
+            IRacingSdkEnum.VarType.Char => ReadCharArray(data, datum),
+            IRacingSdkEnum.VarType.Bool => ReadBoolArray(data, datum),
+            IRacingSdkEnum.VarType.Int => ReadIntArray(data, datum),
+            IRacingSdkEnum.VarType.BitField => ReadBitFieldArray(data, datum),
+            IRacingSdkEnum.VarType.Float => ReadFloatArray(data, datum),
+            IRacingSdkEnum.VarType.Double => ReadDoubleArray(data, datum),
+            _ => null
+        };
+    }
+
+    private static string? TryFormatSampleValue(IRacingSdkData data, string key, IRacingSdkDatum datum)
+    {
+        try
+        {
+            var value = datum.Count <= 1 ? data.GetValue(key) : ReadTelemetryValue(data, datum);
+            return value switch
+            {
+                null => null,
+                System.Collections.IEnumerable sequence when value is not string => string.Join(", ", sequence.Cast<object?>().Take(4).Select(x => x?.ToString() ?? string.Empty)),
+                _ => value.ToString()
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string ReadCharArray(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        var array = new char[datum.Count];
+        data.GetCharArray(datum.Name, array, 0, array.Length);
+        return new string(array).TrimEnd(' ');
+    }
+
+    private static bool[] ReadBoolArray(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        var array = new bool[datum.Count];
+        data.GetBoolArray(datum, array, 0, array.Length);
+        return array;
+    }
+
+    private static int[] ReadIntArray(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        var array = new int[datum.Count];
+        data.GetIntArray(datum, array, 0, array.Length);
+        return array;
+    }
+
+    private static uint[] ReadBitFieldArray(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        var array = new uint[datum.Count];
+        data.GetBitFieldArray(datum, array, 0, array.Length);
+        return array;
+    }
+
+    private static float[] ReadFloatArray(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        var array = new float[datum.Count];
+        data.GetFloatArray(datum, array, 0, array.Length);
+        return array;
+    }
+
+    private static double[] ReadDoubleArray(IRacingSdkData data, IRacingSdkDatum datum)
+    {
+        var array = new double[datum.Count];
+        data.GetDoubleArray(datum, array, 0, array.Length);
+        return array;
     }
 
     private static bool ReadBool(IRacingSdkData data, string name)

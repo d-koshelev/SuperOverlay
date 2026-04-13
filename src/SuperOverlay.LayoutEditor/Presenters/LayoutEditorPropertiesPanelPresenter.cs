@@ -21,6 +21,7 @@ public sealed class LayoutEditorPropertiesPanelPresenter
             _view.SelectedObjectMetaText.Visibility = Visibility.Visible;
             _view.ShowInRaceCheckBox.IsEnabled = false;
             _view.ShowInRaceCheckBox.IsChecked = false;
+            ShowRawBindingConfiguration(false);
             ShowTextConfiguration(false);
             return;
         }
@@ -32,6 +33,8 @@ public sealed class LayoutEditorPropertiesPanelPresenter
             _view.SelectedObjectMetaText.Visibility = Visibility.Visible;
             _view.ShowInRaceCheckBox.IsEnabled = true;
             _view.ShowInRaceCheckBox.IsChecked = primaryWidget.ShowInRace;
+            ShowRawBindingConfiguration(true);
+            ApplyRawBindingSelection(primaryWidget);
             ShowTextConfiguration(true);
             ApplyTextSizeSelection(primaryWidget);
             ApplyTextRoleSelection(primaryWidget);
@@ -43,7 +46,28 @@ public sealed class LayoutEditorPropertiesPanelPresenter
         _view.SelectedObjectMetaText.Visibility = Visibility.Visible;
         _view.ShowInRaceCheckBox.IsEnabled = true;
         _view.ShowInRaceCheckBox.IsChecked = selected.All(x => x.ShowInRace);
+        ShowRawBindingConfiguration(false);
         ShowTextConfiguration(false);
+    }
+
+    private void ShowRawBindingConfiguration(bool isVisible)
+    {
+        var visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+        _view.RawBindingHeader.Visibility = visibility;
+        _view.RawBindingGrid.Visibility = visibility;
+    }
+
+    private void ApplyRawBindingSelection(LayoutEditorWidget widget)
+    {
+        _view.RawBindingSourceComboBox.SelectedIndex = string.Equals(widget.RawBindingSource, "SessionInfo", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+
+        var fields = LayoutEditorRawFieldCatalog.GetFields(widget.RawBindingSource);
+        _view.RawBindingFieldComboBox.ItemsSource = fields;
+        _view.RawBindingFieldComboBox.SelectedItem = fields.FirstOrDefault(x => string.Equals(x, widget.RawBindingFieldPath, StringComparison.OrdinalIgnoreCase));
+        if (_view.RawBindingFieldComboBox.SelectedItem is null)
+        {
+            _view.RawBindingFieldComboBox.Text = widget.RawBindingFieldPath;
+        }
     }
 
     private void ShowTextConfiguration(bool isVisible)

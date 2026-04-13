@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -99,7 +99,9 @@ public sealed class ShiftLedDashboardPresenter : ILayoutItemPresenter
             return;
         }
 
-        var shiftPercent = Math.Clamp(state.Vehicle.ShiftLightPercent, 0.0, 1.0);
+        var shiftPercent = DashboardRuntimeValueResolver.TryResolveDouble(state, _settings.ValueBinding, out var rawValue)
+            ? Math.Clamp(rawValue, 0.0, 1.0)
+            : Math.Clamp(state.Vehicle.ShiftLightPercent, 0.0, 1.0);
         var activeCount = CalculateActiveCount(shiftPercent);
         var shouldBlink = shiftPercent >= _settings.BlinkPercent;
         if (shouldBlink)

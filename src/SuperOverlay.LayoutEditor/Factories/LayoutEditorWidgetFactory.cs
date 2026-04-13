@@ -6,7 +6,7 @@ public static class LayoutEditorWidgetFactory
 {
     public static LayoutEditorWidget CreateDefault(double width, double height, Guid? id = null)
     {
-        return new LayoutEditorWidget
+        return ApplyRawPreview(new LayoutEditorWidget
         {
             Id = id ?? Guid.NewGuid(),
             Width = width,
@@ -14,12 +14,14 @@ public static class LayoutEditorWidgetFactory
             ShowInRace = true,
             IsLocked = false,
             IsVisibleInCurrentMode = true,
-        };
+            RawBindingSource = "TelemetryRaw",
+            RawBindingFieldPath = "Speed",
+        });
     }
 
     public static LayoutEditorWidget CreateCopy(LayoutEditorWidget source, double? x = null, double? y = null, Guid? groupId = null, Guid? id = null)
     {
-        return new LayoutEditorWidget
+        return ApplyRawPreview(new LayoutEditorWidget
         {
             Id = id ?? Guid.NewGuid(),
             X = x ?? source.X,
@@ -30,6 +32,8 @@ public static class LayoutEditorWidgetFactory
             IsLocked = source.IsLocked,
             IsVisibleInCurrentMode = source.IsVisibleInCurrentMode,
             GroupId = groupId ?? source.GroupId,
+            RawBindingSource = source.RawBindingSource,
+            RawBindingFieldPath = source.RawBindingFieldPath,
             TopLeftContent = source.TopLeftContent,
             TopRightContent = source.TopRightContent,
             CenterContent = source.CenterContent,
@@ -45,12 +49,12 @@ public static class LayoutEditorWidgetFactory
             CenterTextRole = source.CenterTextRole,
             BottomLeftTextRole = source.BottomLeftTextRole,
             BottomRightTextRole = source.BottomRightTextRole,
-        };
+        });
     }
 
     public static LayoutEditorWidget CreateFromPreset(LayoutEditorPresetWidget source, double x, double y, Guid? groupId = null)
     {
-        return new LayoutEditorWidget
+        return ApplyRawPreview(new LayoutEditorWidget
         {
             X = x,
             Y = y,
@@ -60,6 +64,8 @@ public static class LayoutEditorWidgetFactory
             IsLocked = source.IsLocked,
             IsVisibleInCurrentMode = true,
             GroupId = groupId ?? source.GroupId,
+            RawBindingSource = source.RawBindingSource,
+            RawBindingFieldPath = source.RawBindingFieldPath,
             TopLeftContent = source.TopLeftContent,
             TopRightContent = source.TopRightContent,
             CenterContent = source.CenterContent,
@@ -75,12 +81,12 @@ public static class LayoutEditorWidgetFactory
             CenterTextRole = source.CenterTextRole,
             BottomLeftTextRole = source.BottomLeftTextRole,
             BottomRightTextRole = source.BottomRightTextRole,
-        };
+        });
     }
 
     public static LayoutEditorWidget CreateFromLayout(LayoutEditorLayoutWidget source, double x, double y)
     {
-        return new LayoutEditorWidget
+        return ApplyRawPreview(new LayoutEditorWidget
         {
             X = x,
             Y = y,
@@ -90,6 +96,8 @@ public static class LayoutEditorWidgetFactory
             IsLocked = source.IsLocked,
             IsVisibleInCurrentMode = true,
             GroupId = source.GroupId,
+            RawBindingSource = source.RawBindingSource,
+            RawBindingFieldPath = source.RawBindingFieldPath,
             TopLeftContent = source.TopLeftContent,
             TopRightContent = source.TopRightContent,
             CenterContent = source.CenterContent,
@@ -105,6 +113,17 @@ public static class LayoutEditorWidgetFactory
             CenterTextRole = source.CenterTextRole,
             BottomLeftTextRole = source.BottomLeftTextRole,
             BottomRightTextRole = source.BottomRightTextRole,
-        };
+        });
+    }
+
+    private static LayoutEditorWidget ApplyRawPreview(LayoutEditorWidget widget)
+    {
+        if (string.IsNullOrWhiteSpace(widget.CenterContent)
+            || string.Equals(widget.CenterContent, widget.RawBindingFieldPath, StringComparison.OrdinalIgnoreCase))
+        {
+            widget.CenterContent = LayoutEditorRawFieldCatalog.GetPreviewValue(widget.RawBindingSource, widget.RawBindingFieldPath);
+        }
+
+        return widget;
     }
 }

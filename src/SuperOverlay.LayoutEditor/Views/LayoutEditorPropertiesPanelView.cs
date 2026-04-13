@@ -7,6 +7,10 @@ public sealed class LayoutEditorPropertiesPanelView
     public required TextBlock SelectedObjectText { get; init; }
     public required TextBlock SelectedObjectMetaText { get; init; }
     public required CheckBox ShowInRaceCheckBox { get; init; }
+    public required TextBlock RawBindingHeader { get; init; }
+    public required Grid RawBindingGrid { get; init; }
+    public required ComboBox RawBindingSourceComboBox { get; init; }
+    public required ComboBox RawBindingFieldComboBox { get; init; }
 
     public required TextBlock TextSizeHeader { get; init; }
     public required Grid TextSizeGrid { get; init; }

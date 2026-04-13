@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Shapes;
 
 namespace SuperOverlay.LayoutEditor;
 
@@ -11,7 +12,7 @@ public sealed class LayoutEditorChromePresenter
     private readonly Border _floatingMenu;
     private readonly Border _propertiesPanel;
     private readonly Border _placementHintPanel;
-    private readonly Border _selectionRectangle;
+    private readonly Rectangle _selectionRectangle;
     private readonly ItemsControl _widgetsItemsControl;
     private readonly ItemsControl _presetPreviewItemsControl;
     private readonly Button _snapToggleButton;
@@ -30,7 +31,7 @@ public sealed class LayoutEditorChromePresenter
         Border floatingMenu,
         Border propertiesPanel,
         Border placementHintPanel,
-        Border selectionRectangle,
+        Rectangle selectionRectangle,
         ItemsControl widgetsItemsControl,
         ItemsControl presetPreviewItemsControl,
         Button snapToggleButton,

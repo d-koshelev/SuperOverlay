@@ -656,6 +656,36 @@
                               Foreground="#F2F5FA"
                               Checked="ShowInRaceLayoutCheckBox_OnChanged"
                               Unchecked="ShowInRaceLayoutCheckBox_OnChanged"/>
+                    <TextBlock x:Name="RawBindingHeaderTextBlock"
+                               Margin="0,16,0,0"
+                               Text="Raw Binding"
+                               Foreground="#F2F5FA"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Visibility="Collapsed"/>
+                    <Grid x:Name="RawBindingGrid"
+                          Margin="0,10,0,0"
+                          Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Source" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="RawBindingSourceComboBox" Grid.Row="0" Grid.Column="2" MinWidth="140" SelectionChanged="RawBindingSourceComboBox_OnSelectionChanged">
+                            <ComboBoxItem Content="TelemetryRaw"/>
+                            <ComboBoxItem Content="SessionInfo"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Field" Foreground="#A7B2C7" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="RawBindingFieldComboBox" Grid.Row="2" Grid.Column="2" MinWidth="220" IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True" SelectionChanged="RawBindingFieldComboBox_OnSelectionChanged" LostFocus="RawBindingFieldComboBox_OnLostFocus"/>
+                    </Grid>
                     <TextBlock x:Name="TextSizeHeaderTextBlock"
                                Margin="0,16,0,0"
                                Text="Text Sizes"

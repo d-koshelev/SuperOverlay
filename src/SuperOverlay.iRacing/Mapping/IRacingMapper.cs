@@ -9,7 +9,15 @@ public sealed class IRacingMapper
     {
         return new DashboardRuntimeState(
             new VehicleState(speed, rpm, gear, shiftLightPercent),
-            new InputState(0, 0, 0));
+            new InputState(0, 0, 0),
+            new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Speed"] = speed,
+                ["RPM"] = rpm,
+                ["Gear"] = gear,
+                ["ShiftIndicatorPct"] = shiftLightPercent
+            },
+            new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase));
     }
 
     public DashboardRuntimeState Map(IRacingNormalizedSnapshot snapshot)
@@ -25,6 +33,10 @@ public sealed class IRacingMapper
             new InputState(
                 snapshot.Inputs.Throttle,
                 snapshot.Inputs.Brake,
-                snapshot.Inputs.Clutch));
+                snapshot.Inputs.Clutch),
+            new Dictionary<string, object?>(snapshot.RawTelemetry.Values, StringComparer.OrdinalIgnoreCase),
+            snapshot.RawSession is null
+                ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object?>(snapshot.RawSession.Fields, StringComparer.OrdinalIgnoreCase));
     }
 }

@@ -1,4 +1,3 @@
-using System.Windows;
 using WpfWindow = System.Windows.Window;
 using System.Windows.Controls;
 using SuperOverlay.iRacing.Hosting;
@@ -12,8 +11,6 @@ internal static class RuntimeWindowControllerFactory
     public static RuntimeWindowControllers Create(
         WpfWindow owner,
         Grid rootGrid,
-        Border runtimeHintBorder,
-        Border editOverlayBar,
         IRacingTelemetryProvider telemetry,
         IRacingMapper mapper,
         OverlayRuntimeBootstrapper bootstrapper,
@@ -21,8 +18,6 @@ internal static class RuntimeWindowControllerFactory
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(rootGrid);
-        ArgumentNullException.ThrowIfNull(runtimeHintBorder);
-        ArgumentNullException.ThrowIfNull(editOverlayBar);
         ArgumentNullException.ThrowIfNull(telemetry);
         ArgumentNullException.ThrowIfNull(mapper);
         ArgumentNullException.ThrowIfNull(bootstrapper);
@@ -31,8 +26,6 @@ internal static class RuntimeWindowControllerFactory
         var windowController = new RuntimeWindowController(
             owner,
             rootGrid,
-            runtimeHintBorder,
-            editOverlayBar,
             telemetry,
             mapper,
             bootstrapper);

@@ -1,3 +1,5 @@
+using SuperOverlay.Dashboards.Runtime;
+
 namespace SuperOverlay.Dashboards.Items.ShiftLeds;
 
 public sealed record ShiftLedDashboardSettings(
@@ -10,7 +12,11 @@ public sealed record ShiftLedDashboardSettings(
     string LedOnColor = "#FF1E00",
     bool UsePerLedColors = true,
     string LedOnColors = "#006C8E,#0097C9,#00C2FF,#00FF9C,#B4FF00,#FFD400,#FFB000,#FF7A00,#FF4E00,#FF3C00,#FF2A00,#FF1E00",
+    DashboardFieldBinding? valueBinding = null,
     double CornerTopLeft = 0,
     double CornerTopRight = 0,
     double CornerBottomRight = 0,
-    double CornerBottomLeft = 0);
+    double CornerBottomLeft = 0)
+{
+    public DashboardFieldBinding ValueBinding { get; init; } = valueBinding ?? DashboardFieldBinding.Telemetry("ShiftIndicatorPct");
+}
